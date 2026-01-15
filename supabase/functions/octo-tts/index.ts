@@ -1,4 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
+import { encode as base64Encode } from 'https://deno.land/std@0.168.0/encoding/base64.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -31,14 +32,13 @@ serve(async (req) => {
       );
     }
 
-    // Use a quirky, interesting voice for Octo
-    // "Rachel" - clear female voice, or we can use "Adam" for deeper
-    const voiceId = 'pNInz6obpgDQGcFmaJgB'; // Adam - deep, authoritative
+    // Roger voice - clear and expressive
+    const voiceId = 'CwhRBWXzGAHq8TQ4Fs17';
     
     console.log('[octo-tts] Generating speech for:', text.slice(0, 50) + '...');
 
     const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
+      `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
       {
         method: 'POST',
         headers: {
@@ -47,11 +47,11 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           text: text,
-          model_id: 'eleven_multilingual_v2',
+          model_id: 'eleven_turbo_v2_5',
           voice_settings: {
-            stability: 0.5,
-            similarity_boost: 0.75,
-            style: 0.3,
+            stability: 0.4,
+            similarity_boost: 0.8,
+            style: 0.5,
             use_speaker_boost: true,
           },
         }),
@@ -67,11 +67,9 @@ serve(async (req) => {
       );
     }
 
-    // Return audio as base64
+    // Return audio as base64 using proper encoding
     const arrayBuffer = await response.arrayBuffer();
-    const base64Audio = btoa(
-      String.fromCharCode(...new Uint8Array(arrayBuffer))
-    );
+    const base64Audio = base64Encode(arrayBuffer);
 
     console.log('[octo-tts] Generated audio, size:', arrayBuffer.byteLength);
 

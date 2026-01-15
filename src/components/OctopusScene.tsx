@@ -53,13 +53,13 @@ function LowPolyOctopus({ lifeState, hp, isSpeaking = false }: OctopusProps) {
     if (mouthRef.current) {
       if (isSpeaking) {
         // Animate mouth opening and closing rapidly when speaking
-        const mouthOpen = Math.abs(Math.sin(time * 12)) * 0.15 + 0.05;
-        mouthRef.current.scale.set(1, mouthOpen * 5 + 0.5, 1);
-        mouthRef.current.position.y = 0.35 - mouthOpen * 0.1;
+        const mouthOpen = Math.abs(Math.sin(time * 15)) * 0.3 + 0.1;
+        mouthRef.current.scale.set(1, mouthOpen * 4 + 1, 1);
+        mouthRef.current.position.y = 0.2 - mouthOpen * 0.15;
       } else {
-        // Closed mouth when not speaking
-        mouthRef.current.scale.set(1, 0.5, 1);
-        mouthRef.current.position.y = 0.35;
+        // Closed mouth when not speaking - flat line
+        mouthRef.current.scale.set(1, 0.3, 1);
+        mouthRef.current.position.y = 0.2;
       }
     }
     
@@ -98,8 +98,8 @@ function LowPolyOctopus({ lifeState, hp, isSpeaking = false }: OctopusProps) {
   const eyeGeometry = useMemo(() => new THREE.IcosahedronGeometry(0.22, 0), []);
   const pupilGeometry = useMemo(() => new THREE.BoxGeometry(0.1, 0.1, 0.1), []);
   
-  // Mouth geometry - simple box that scales for animation
-  const mouthGeometry = useMemo(() => new THREE.BoxGeometry(0.3, 0.1, 0.15), []);
+  // Mouth geometry - oval shape for more visible mouth
+  const mouthGeometry = useMemo(() => new THREE.BoxGeometry(0.4, 0.15, 0.2), []);
   
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
@@ -144,15 +144,21 @@ function LowPolyOctopus({ lifeState, hp, isSpeaking = false }: OctopusProps) {
       <mesh 
         ref={mouthRef} 
         geometry={mouthGeometry} 
-        position={[0, 0.35, 1.0]}
+        position={[0, 0.2, 1.05]}
       >
-        <meshStandardMaterial color={colors.dark} flatShading />
+        <meshStandardMaterial color="#1a0505" flatShading />
       </mesh>
       
-      {/* Inner mouth (visible when open) */}
-      <mesh position={[0, 0.35, 0.95]}>
-        <boxGeometry args={[0.25, 0.08, 0.1]} />
-        <meshStandardMaterial color="#1a0a1a" />
+      {/* Inner mouth (visible when open) - darker inside */}
+      <mesh position={[0, 0.2, 0.98]}>
+        <boxGeometry args={[0.35, 0.12, 0.1]} />
+        <meshStandardMaterial color="#0a0000" />
+      </mesh>
+      
+      {/* Lips/mouth outline for visibility */}
+      <mesh position={[0, 0.2, 1.08]}>
+        <boxGeometry args={[0.45, 0.05, 0.05]} />
+        <meshStandardMaterial color={colors.dark} flatShading />
       </mesh>
       
       {/* Tentacles */}
