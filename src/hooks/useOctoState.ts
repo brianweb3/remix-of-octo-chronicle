@@ -79,7 +79,7 @@ export function useOctoState() {
   useEffect(() => {
     loadStateFromDatabase();
     loadWritingsFromDatabase();
-    loadTransactionsFromDatabase();
+    loadTransactionsFromBlockchain(); // Load real transactions from blockchain
   }, []);
   
   // Database table types (for type safety before regeneration)
@@ -129,26 +129,81 @@ export function useOctoState() {
     }
   };
   
-  // Load transactions from database
-  const loadTransactionsFromDatabase = async () => {
+  // Load real transactions from blockchain (not from database)
+  const loadTransactionsFromBlockchain = async () => {
     try {
-      const { data, error } = await supabase
-        .from('transaction_history' as any)
-        .select('*')
-        .order('timestamp', { ascending: false })
-        .limit(20);
+      const { HELIUS_RPC, WALLET_ADDRESS, donationToHP } = await import('@/types/octo');
       
-      const rows = data as unknown as TransactionRow[] | null;
-      if (rows && !error) {
-        setTransactions(rows.map(t => ({
-          txHash: t.tx_hash,
-          amountSol: parseFloat(t.amount_sol),
-          hpAdded: t.hp_added,
-          timestamp: new Date(t.timestamp),
-        })));
+      // Get recent signatures
+      const sigResponse = await fetch(HELIUS_RPC, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          jsonrpc: '2.0',
+          id: 1,
+          method: 'getSignaturesForAddress',
+          params: [WALLET_ADDRESS, { limit: 10 }],
+        }),
+      });
+      
+      const sigData = await sigResponse.json();
+      const signatures = sigData.result || [];
+      
+      const loadedTxs: Transaction[] = [];
+      
+      for (const sig of signatures.slice(0, 5)) {
+        // Get transaction details
+        const txResponse = await fetch(HELIUS_RPC, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'getTransaction',
+            params: [sig.signature, { encoding: 'jsonParsed', maxSupportedTransactionVersion: 0 }],
+          }),
+        });
+        
+        const txData = await txResponse.json();
+        const tx = txData.result;
+        
+        if (!tx) continue;
+        
+        const preBalances = tx.meta?.preBalances || [];
+        const postBalances = tx.meta?.postBalances || [];
+        const accountKeys = tx.transaction?.message?.accountKeys || [];
+        
+        // Find wallet index
+        let walletIndex = -1;
+        for (let i = 0; i < accountKeys.length; i++) {
+          const key = typeof accountKeys[i] === 'string' ? accountKeys[i] : accountKeys[i]?.pubkey;
+          if (key === WALLET_ADDRESS) {
+            walletIndex = i;
+            break;
+          }
+        }
+        
+        if (walletIndex === -1) continue;
+        
+        const diffLamports = (postBalances[walletIndex] || 0) - (preBalances[walletIndex] || 0);
+        
+        if (diffLamports > 0) {
+          const amountSol = diffLamports / 1e9;
+          loadedTxs.push({
+            txHash: sig.signature,
+            amountSol,
+            hpAdded: donationToHP(amountSol),
+            timestamp: new Date((tx.blockTime || Date.now() / 1000) * 1000),
+          });
+        }
+      }
+      
+      if (loadedTxs.length > 0) {
+        setTransactions(loadedTxs);
+        console.log('[useOctoState] Loaded', loadedTxs.length, 'real transactions from blockchain');
       }
     } catch (e) {
-      console.log('Could not load transactions from database');
+      console.log('Could not load transactions from blockchain:', e);
     }
   };
   
