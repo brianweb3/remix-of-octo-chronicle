@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { Play } from 'lucide-react';
 
 interface SpeechBubbleProps {
   message: string | null;
@@ -7,16 +8,43 @@ interface SpeechBubbleProps {
   onSpeakingChange?: (speaking: boolean) => void;
 }
 
+// Track if user has interacted with the page
+let userHasInteracted = false;
+
 export function SpeechBubble({ message, isMuted = false, onSpeakingChange }: SpeechBubbleProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastSpokenMessage = useRef<string | null>(null);
+  const [pendingAudio, setPendingAudio] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Track user interaction
+  useEffect(() => {
+    const handleInteraction = () => {
+      userHasInteracted = true;
+      // If we have pending audio, play it
+      if (pendingAudio) {
+        playAudio(pendingAudio);
+        setPendingAudio(null);
+      }
+    };
+
+    window.addEventListener('click', handleInteraction, { once: true });
+    window.addEventListener('keydown', handleInteraction, { once: true });
+    window.addEventListener('touchstart', handleInteraction, { once: true });
+
+    return () => {
+      window.removeEventListener('click', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+      window.removeEventListener('touchstart', handleInteraction);
+    };
+  }, [pendingAudio]);
 
   // Speak message when it changes
   useEffect(() => {
     if (!message || message === lastSpokenMessage.current || isMuted) return;
     
     lastSpokenMessage.current = message;
-    speakMessage(message);
+    generateSpeech(message);
   }, [message, isMuted]);
 
   // Stop audio when muted
@@ -28,16 +56,54 @@ export function SpeechBubble({ message, isMuted = false, onSpeakingChange }: Spe
     }
   }, [isMuted, onSpeakingChange]);
 
-  const speakMessage = async (text: string) => {
+  const playAudio = async (audioContent: string) => {
     try {
+      // Stop any existing audio
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      
       onSpeakingChange?.(true);
+      
+      const audio = new Audio(`data:audio/mpeg;base64,${audioContent}`);
+      audioRef.current = audio;
+      
+      audio.onended = () => {
+        onSpeakingChange?.(false);
+        setPendingAudio(null);
+      };
+      audio.onerror = (e) => {
+        console.error('[SpeechBubble] Audio error:', e);
+        onSpeakingChange?.(false);
+        setPendingAudio(null);
+      };
+      
+      await audio.play();
+      setPendingAudio(null);
+    } catch (error: unknown) {
+      const err = error as Error;
+      if (err.name === 'NotAllowedError') {
+        console.log('[SpeechBubble] Autoplay blocked, waiting for user interaction');
+        setPendingAudio(audioContent);
+        onSpeakingChange?.(false);
+      } else {
+        console.error('[SpeechBubble] Play error:', error);
+        onSpeakingChange?.(false);
+      }
+    }
+  };
+
+  const generateSpeech = async (text: string) => {
+    try {
+      setIsLoading(true);
       
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       
       if (!supabaseUrl || !supabaseKey) {
         console.log('[SpeechBubble] No Supabase config for TTS');
-        onSpeakingChange?.(false);
+        setIsLoading(false);
         return;
       }
 
@@ -50,33 +116,34 @@ export function SpeechBubble({ message, isMuted = false, onSpeakingChange }: Spe
         body: JSON.stringify({ text }),
       });
 
+      setIsLoading(false);
+
       if (!response.ok) {
         console.error('[SpeechBubble] TTS failed:', response.status);
-        onSpeakingChange?.(false);
         return;
       }
 
       const data = await response.json();
       
       if (data.audioContent) {
-        // Stop any existing audio
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current = null;
+        if (userHasInteracted) {
+          await playAudio(data.audioContent);
+        } else {
+          // Store for later when user interacts
+          setPendingAudio(data.audioContent);
+          console.log('[SpeechBubble] Audio ready, waiting for user interaction');
         }
-        
-        // Play new audio
-        const audio = new Audio(`data:audio/mpeg;base64,${data.audioContent}`);
-        audioRef.current = audio;
-        
-        audio.onended = () => onSpeakingChange?.(false);
-        audio.onerror = () => onSpeakingChange?.(false);
-        
-        await audio.play();
       }
     } catch (error) {
       console.error('[SpeechBubble] TTS error:', error);
-      onSpeakingChange?.(false);
+      setIsLoading(false);
+    }
+  };
+
+  const handlePlayClick = () => {
+    userHasInteracted = true;
+    if (pendingAudio) {
+      playAudio(pendingAudio);
     }
   };
 
@@ -92,6 +159,24 @@ export function SpeechBubble({ message, isMuted = false, onSpeakingChange }: Spe
         >
           {/* Speech bubble */}
           <div className="relative bg-card border border-border/50 p-4 shadow-lg rounded-lg">
+            {/* Play button if audio is pending */}
+            {pendingAudio && !isMuted && (
+              <button
+                onClick={handlePlayClick}
+                className="absolute -top-2 -right-2 w-8 h-8 bg-emerald-500 hover:bg-emerald-400 rounded-full flex items-center justify-center shadow-lg transition-colors z-10"
+                title="Click to play voice"
+              >
+                <Play className="w-4 h-4 text-white fill-white" />
+              </button>
+            )}
+            
+            {/* Loading indicator */}
+            {isLoading && !isMuted && (
+              <div className="absolute -top-2 -right-2 w-8 h-8 bg-card border border-border rounded-full flex items-center justify-center">
+                <div className="w-4 h-4 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            
             {/* Bubble content */}
             <TypewriterText text={message} />
             
