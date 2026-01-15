@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Volume2, VolumeX } from 'lucide-react';
 import { OctopusScene } from '@/components/OctopusScene';
 import { ChatFeed } from '@/components/ChatFeed';
 import { WritingsSection } from '@/components/WritingsSection';
@@ -11,8 +12,12 @@ import { TopNav } from '@/components/TopNav';
 import { SpeechBubble } from '@/components/SpeechBubble';
 import { AdminPanel } from '@/components/AdminPanel';
 import { useOctoState } from '@/hooks/useOctoState';
+import { Button } from '@/components/ui/button';
 
 type TabType = 'home' | 'x' | 'writings';
+
+const STORAGE_KEY_MUTED = 'octo_voice_muted';
+const TWITTER_URL = 'https://x.com/OctoClaude'; // Replace with actual Twitter handle
 
 function Index() {
   const { 
@@ -32,6 +37,20 @@ function Index() {
     setPumpfunToken,
     isPumpfunConnected,
   } = useOctoState();
+  
+  // Sound state - persisted in localStorage
+  const [isMuted, setIsMuted] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(STORAGE_KEY_MUTED) === 'true';
+    }
+    return false;
+  });
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  
+  // Save mute state to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY_MUTED, isMuted.toString());
+  }, [isMuted]);
   
   // Map transactions to donation format for DonationWindow
   const donations = transactions.map(t => ({
@@ -73,6 +92,38 @@ function Index() {
         </motion.div>
         
         <div className="flex items-center gap-3">
+          {/* Sound toggle button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsMuted(!isMuted)}
+            className={`relative ${isSpeaking && !isMuted ? 'text-emerald-400' : 'text-foreground-light/60'} hover:text-foreground-light`}
+            title={isMuted ? 'Unmute voice' : 'Mute voice'}
+          >
+            {isMuted ? (
+              <VolumeX className="w-5 h-5" />
+            ) : (
+              <Volume2 className={`w-5 h-5 ${isSpeaking ? 'animate-pulse' : ''}`} />
+            )}
+          </Button>
+          
+          {/* Twitter/X link */}
+          <a
+            href={TWITTER_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center w-9 h-9 rounded-md hover:bg-white/10 transition-colors"
+            title="Follow on X"
+          >
+            <svg 
+              viewBox="0 0 24 24" 
+              className="w-5 h-5 text-foreground-light/60 hover:text-foreground-light"
+              fill="currentColor"
+            >
+              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+            </svg>
+          </a>
+          
           <ContractButton address={contractAddress} />
         </div>
       </header>
@@ -115,7 +166,11 @@ function Index() {
                   
                   {/* Speech bubble - right side */}
                   <div className="flex-1 pt-8">
-                    <SpeechBubble message={currentResponse} />
+                    <SpeechBubble 
+                      message={currentResponse} 
+                      isMuted={isMuted}
+                      onSpeakingChange={setIsSpeaking}
+                    />
                   </div>
                 </div>
                 

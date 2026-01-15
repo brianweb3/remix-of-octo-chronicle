@@ -1,14 +1,13 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { useEffect, useRef, useState } from 'react';
-import { Volume2, VolumeX } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 
 interface SpeechBubbleProps {
   message: string | null;
+  isMuted?: boolean;
+  onSpeakingChange?: (speaking: boolean) => void;
 }
 
-export function SpeechBubble({ message }: SpeechBubbleProps) {
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
+export function SpeechBubble({ message, isMuted = false, onSpeakingChange }: SpeechBubbleProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastSpokenMessage = useRef<string | null>(null);
 
@@ -20,16 +19,25 @@ export function SpeechBubble({ message }: SpeechBubbleProps) {
     speakMessage(message);
   }, [message, isMuted]);
 
+  // Stop audio when muted
+  useEffect(() => {
+    if (isMuted && audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+      onSpeakingChange?.(false);
+    }
+  }, [isMuted, onSpeakingChange]);
+
   const speakMessage = async (text: string) => {
     try {
-      setIsSpeaking(true);
+      onSpeakingChange?.(true);
       
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
       const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       
       if (!supabaseUrl || !supabaseKey) {
         console.log('[SpeechBubble] No Supabase config for TTS');
-        setIsSpeaking(false);
+        onSpeakingChange?.(false);
         return;
       }
 
@@ -44,7 +52,7 @@ export function SpeechBubble({ message }: SpeechBubbleProps) {
 
       if (!response.ok) {
         console.error('[SpeechBubble] TTS failed:', response.status);
-        setIsSpeaking(false);
+        onSpeakingChange?.(false);
         return;
       }
 
@@ -61,23 +69,15 @@ export function SpeechBubble({ message }: SpeechBubbleProps) {
         const audio = new Audio(`data:audio/mpeg;base64,${data.audioContent}`);
         audioRef.current = audio;
         
-        audio.onended = () => setIsSpeaking(false);
-        audio.onerror = () => setIsSpeaking(false);
+        audio.onended = () => onSpeakingChange?.(false);
+        audio.onerror = () => onSpeakingChange?.(false);
         
         await audio.play();
       }
     } catch (error) {
       console.error('[SpeechBubble] TTS error:', error);
-      setIsSpeaking(false);
+      onSpeakingChange?.(false);
     }
-  };
-
-  const toggleMute = () => {
-    if (audioRef.current && !isMuted) {
-      audioRef.current.pause();
-      setIsSpeaking(false);
-    }
-    setIsMuted(!isMuted);
   };
 
   return (
@@ -92,21 +92,6 @@ export function SpeechBubble({ message }: SpeechBubbleProps) {
         >
           {/* Speech bubble */}
           <div className="relative bg-card border border-border/50 p-4 shadow-lg rounded-lg">
-            {/* Mute button */}
-            <button
-              onClick={toggleMute}
-              className="absolute top-2 right-2 p-1 rounded-full hover:bg-white/10 transition-colors"
-              title={isMuted ? 'Unmute' : 'Mute'}
-            >
-              {isMuted ? (
-                <VolumeX className="w-3 h-3 text-foreground-light/40" />
-              ) : (
-                <Volume2 
-                  className={`w-3 h-3 ${isSpeaking ? 'text-emerald-400 animate-pulse' : 'text-foreground-light/40'}`} 
-                />
-              )}
-            </button>
-            
             {/* Bubble content */}
             <TypewriterText text={message} />
             
@@ -141,7 +126,7 @@ export function SpeechBubble({ message }: SpeechBubbleProps) {
 function TypewriterText({ text }: { text: string }) {
   return (
     <motion.p 
-      className="text-sm text-foreground-light/90 font-mono leading-relaxed pr-6"
+      className="text-sm text-foreground-light/90 font-mono leading-relaxed"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
