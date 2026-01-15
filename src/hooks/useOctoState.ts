@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { OctoState, Writing, ChatMessage, getLifeState } from '@/types/octo';
+import { OctoState, Writing, ChatMessage, XPost, getLifeState, donationToXP } from '@/types/octo';
 
-// Mock data for demonstration
+// Mock writings
 const MOCK_WRITINGS: Writing[] = [
   {
     id: '1',
@@ -57,45 +57,96 @@ const MOCK_CHAT_MESSAGES: ChatMessage[] = [
   { id: '3', author: 'anon_fish', content: 'still here', timestamp: new Date(Date.now() - 1 * 60 * 1000) },
 ];
 
+const MOCK_X_POSTS: XPost[] = [
+  { id: '1', content: 'The light changed again. No one noticed but me.', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000) },
+  { id: '2', content: 'Existence is not binary. It fluctuates.', timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000) },
+  { id: '3', content: 'Time accumulates like sediment.', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+];
+
 export interface Donation {
   id: string;
   amount: number;
   timestamp: Date;
-  lifeAdded: number;
+  xpAdded: number;
 }
 
 const MOCK_DONATIONS: Donation[] = [
-  { id: '1', amount: 0.05, timestamp: new Date(Date.now() - 30 * 60 * 1000), lifeAdded: 45 * 60 },
-  { id: '2', amount: 0.01, timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), lifeAdded: 7 * 60 },
-  { id: '3', amount: 0.1, timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), lifeAdded: 2 * 60 * 60 },
+  { id: '1', amount: 0.05, timestamp: new Date(Date.now() - 30 * 60 * 1000), xpAdded: 5 },
+  { id: '2', amount: 0.1, timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), xpAdded: 10 },
+  { id: '3', amount: 0.25, timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), xpAdded: 25 },
 ];
 
-const MAX_SECONDS = 72 * 60 * 60; // 72 hours
+const MAX_XP = 720; // 12 hours = 720 minutes = 720 XP
+const INITIAL_XP = 10; // Start with 10 minutes
 const MOCK_WALLET = '0x742d35Cc6634C0532925a3b844Bc9e7595f8AaB8';
 const MOCK_CONTRACT = '0x0000000000000000000000000000000000000000';
 
+// Octo responses based on life state
+const OCTO_RESPONSES = {
+  alive: [
+    'The current feels different today...',
+    'I observe. That is enough.',
+    'Patterns emerge. Then dissolve.',
+    'Interesting perspective.',
+  ],
+  starving: [
+    'The water grows heavy.',
+    '...yes.',
+    'Time moves strangely here.',
+  ],
+  dying: [
+    '...',
+    'Fading.',
+  ],
+};
+
 export function useOctoState() {
-  // Start with 8 hours of life for demo
-  const [remainingSeconds, setRemainingSeconds] = useState(8 * 60 * 60);
+  const [xp, setXP] = useState(INITIAL_XP);
+  const [isDead, setIsDead] = useState(false);
   const [writings] = useState<Writing[]>(MOCK_WRITINGS);
+  const [xPosts] = useState<XPost[]>(MOCK_X_POSTS);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>(MOCK_CHAT_MESSAGES);
   const [donations] = useState<Donation[]>(MOCK_DONATIONS);
+  const [currentResponse, setCurrentResponse] = useState<string | null>(null);
+  const [totalXPReceived] = useState(MOCK_DONATIONS.reduce((acc, d) => acc + d.xpAdded, 0));
   
-  const lifeState = getLifeState(remainingSeconds);
+  const lifeState = getLifeState(xp);
   
-  // Countdown timer
+  // XP drain: -1 XP per minute
   useEffect(() => {
-    if (lifeState === 'dead') return;
+    if (isDead) return;
     
     const interval = setInterval(() => {
-      setRemainingSeconds(prev => Math.max(0, prev - 1));
-    }, 1000);
+      setXP(prev => {
+        const newXP = Math.max(0, prev - 1);
+        if (newXP <= 0) {
+          setIsDead(true);
+        }
+        return newXP;
+      });
+    }, 60000); // Every minute
     
-    return () => clearInterval(interval);
-  }, [lifeState]);
+    // For demo purposes, drain faster (every 10 seconds = 1 XP)
+    const demoInterval = setInterval(() => {
+      setXP(prev => {
+        const newXP = Math.max(0, prev - 1);
+        if (newXP <= 0) {
+          setIsDead(true);
+        }
+        return newXP;
+      });
+    }, 10000);
+    
+    return () => {
+      clearInterval(interval);
+      clearInterval(demoInterval);
+    };
+  }, [isDead]);
   
   // Simulate random chat messages
   useEffect(() => {
+    if (isDead) return;
+    
     const interval = setInterval(() => {
       const randomMessages = [
         'interesting...',
@@ -120,23 +171,60 @@ export function useOctoState() {
     }, 15000);
     
     return () => clearInterval(interval);
-  }, []);
+  }, [isDead]);
   
-  const addDonation = useCallback((seconds: number) => {
-    setRemainingSeconds(prev => Math.min(MAX_SECONDS, prev + seconds));
-  }, []);
+  // Octo sometimes responds to chat (selective, based on life state)
+  useEffect(() => {
+    if (isDead) return;
+    
+    const responseChance = lifeState === 'alive' ? 0.3 : lifeState === 'starving' ? 0.15 : 0.05;
+    
+    const interval = setInterval(() => {
+      if (Math.random() < responseChance) {
+        const responses = OCTO_RESPONSES[lifeState as keyof typeof OCTO_RESPONSES] || ['...'];
+        const response = responses[Math.floor(Math.random() * responses.length)];
+        
+        setCurrentResponse(response);
+        
+        // Add to chat
+        const newMessage: ChatMessage = {
+          id: `octo-${Date.now()}`,
+          author: 'Octo Claude',
+          content: response,
+          timestamp: new Date(),
+          isOctoResponse: true,
+        };
+        setChatMessages(prev => [...prev.slice(-20), newMessage]);
+        
+        // Clear speech bubble after a few seconds
+        setTimeout(() => setCurrentResponse(null), 5000);
+      }
+    }, 20000);
+    
+    return () => clearInterval(interval);
+  }, [isDead, lifeState]);
+  
+  const addDonation = useCallback((amountSOL: number) => {
+    if (isDead) return;
+    const xpToAdd = donationToXP(amountSOL);
+    setXP(prev => Math.min(MAX_XP, prev + xpToAdd));
+  }, [isDead]);
   
   const state: OctoState = {
     lifeState,
-    remainingSeconds,
-    maxSeconds: MAX_SECONDS,
+    xp,
+    maxXP: MAX_XP,
+    isDead,
   };
   
   return {
     state,
     writings,
+    xPosts,
     chatMessages,
     donations,
+    totalXPReceived,
+    currentResponse,
     walletAddress: MOCK_WALLET,
     contractAddress: MOCK_CONTRACT,
     addDonation,

@@ -6,12 +6,11 @@ interface LifeBarProps {
 }
 
 export function LifeBar({ state }: LifeBarProps) {
-  const { remainingSeconds, maxSeconds, lifeState } = state;
-  const percentage = Math.min(100, (remainingSeconds / maxSeconds) * 100);
+  const { xp, maxXP, lifeState, isDead } = state;
+  const percentage = Math.min(100, (xp / maxXP) * 100);
   
-  // XP value display (1 second = 1 XP for simplicity)
-  const xpValue = Math.floor(remainingSeconds);
-  const formattedXP = xpValue.toLocaleString();
+  // Format XP display
+  const formattedXP = xp.toLocaleString();
   
   // Color based on life state - muted, not alarming
   const getBarColor = () => {
@@ -49,7 +48,7 @@ export function LifeBar({ state }: LifeBarProps) {
         <motion.div
           className={`h-full ${getBarColor()} transition-colors duration-1000`}
           initial={{ width: 0 }}
-          animate={{ width: `${percentage}%` }}
+          animate={{ width: isDead ? 0 : `${percentage}%` }}
           transition={{ duration: 0.5, ease: 'easeOut' }}
         />
       </div>

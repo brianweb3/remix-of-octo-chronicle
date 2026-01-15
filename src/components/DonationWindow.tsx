@@ -1,18 +1,20 @@
 import { motion } from 'framer-motion';
+import { DONATION_TABLE } from '@/types/octo';
 
 interface Donation {
   id: string;
   amount: number;
   timestamp: Date;
-  lifeAdded: number;
+  xpAdded: number;
 }
 
 interface DonationWindowProps {
   walletAddress: string;
   recentDonations: Donation[];
+  totalXPReceived?: number;
 }
 
-export function DonationWindow({ walletAddress, recentDonations }: DonationWindowProps) {
+export function DonationWindow({ walletAddress, recentDonations, totalXPReceived = 0 }: DonationWindowProps) {
   const truncatedAddress = `${walletAddress.slice(0, 8)}...${walletAddress.slice(-6)}`;
   
   const copyToClipboard = () => {
@@ -33,12 +35,6 @@ export function DonationWindow({ walletAddress, recentDonations }: DonationWindo
     const diffDays = Math.floor(diffHours / 24);
     return `${diffDays}d ago`;
   };
-  
-  const formatLifeAdded = (seconds: number) => {
-    if (seconds < 60) return `+${seconds}s`;
-    if (seconds < 3600) return `+${Math.floor(seconds / 60)}m`;
-    return `+${Math.floor(seconds / 3600)}h`;
-  };
 
   return (
     <motion.div 
@@ -52,7 +48,7 @@ export function DonationWindow({ walletAddress, recentDonations }: DonationWindo
         Donation Wallet
       </div>
       
-      {/* Wallet address - no rounded corners */}
+      {/* Wallet address */}
       <button
         onClick={copyToClipboard}
         className="w-full flex items-center justify-between p-3 bg-secondary/40 hover:bg-secondary/60 transition-colors group mb-3"
@@ -73,7 +69,36 @@ export function DonationWindow({ walletAddress, recentDonations }: DonationWindo
       
       {/* Minimum notice */}
       <div className="text-xs text-muted-foreground/70 mb-4 px-1">
-        Minimum effective amount: 0.001 SOL
+        Minimum effective amount: 0.01 SOL
+      </div>
+      
+      {/* Divider */}
+      <div className="h-px bg-border/30 mb-4" />
+      
+      {/* Donation → XP Table */}
+      <div className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">
+        Donation → XP
+      </div>
+      
+      <div className="mb-4 text-xs">
+        <table className="w-full">
+          <thead>
+            <tr className="text-muted-foreground/70">
+              <th className="text-left py-1 font-normal">SOL</th>
+              <th className="text-center py-1 font-normal">XP</th>
+              <th className="text-right py-1 font-normal">Time</th>
+            </tr>
+          </thead>
+          <tbody className="text-foreground-light/70">
+            {DONATION_TABLE.map((row) => (
+              <tr key={row.sol} className="border-t border-border/10">
+                <td className="text-left py-1.5 font-mono">{row.sol}</td>
+                <td className="text-center py-1.5 font-mono text-primary/70">+{row.xp}</td>
+                <td className="text-right py-1.5">{row.time}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
       
       {/* Divider */}
@@ -84,7 +109,7 @@ export function DonationWindow({ walletAddress, recentDonations }: DonationWindo
         Recent
       </div>
       
-      <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar">
+      <div className="space-y-2 max-h-24 overflow-y-auto custom-scrollbar mb-4">
         {recentDonations.length > 0 ? (
           recentDonations.map((donation) => (
             <div 
@@ -96,7 +121,7 @@ export function DonationWindow({ walletAddress, recentDonations }: DonationWindo
                   {donation.amount} SOL
                 </span>
                 <span className="text-primary/60 font-mono">
-                  +{Math.floor(donation.lifeAdded)} XP
+                  +{donation.xpAdded} XP
                 </span>
               </div>
               <span className="text-muted-foreground">
@@ -109,6 +134,12 @@ export function DonationWindow({ walletAddress, recentDonations }: DonationWindo
             No recent donations
           </div>
         )}
+      </div>
+      
+      {/* Total XP received */}
+      <div className="flex items-center justify-between text-xs px-1 pt-2 border-t border-border/20">
+        <span className="text-muted-foreground">Total XP received</span>
+        <span className="text-foreground-light/70 font-mono">{totalXPReceived.toLocaleString()}</span>
       </div>
     </motion.div>
   );
