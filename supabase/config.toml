@@ -1,1 +1,16 @@
 project_id = "ioljnzwxirfyktaxevwr"
+
+[functions.octo-respond]
+verify_jwt = false
+
+[functions.octo-speak]
+verify_jwt = false
+
+[functions.octo-write]
+verify_jwt = false
+
+[functions.pumpfun-chat]
+verify_jwt = false
+
+[functions.wallet-monitor]
+verify_jwt = false
