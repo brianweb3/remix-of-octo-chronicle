@@ -14,17 +14,17 @@ let userHasInteracted = false;
 export function SpeechBubble({ message, isMuted = false, onSpeakingChange }: SpeechBubbleProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const lastSpokenMessage = useRef<string | null>(null);
-  const [pendingAudio, setPendingAudio] = useState<string | null>(null);
+  const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   // Track user interaction
   useEffect(() => {
     const handleInteraction = () => {
       userHasInteracted = true;
-      // If we have pending audio, play it
-      if (pendingAudio) {
-        playAudio(pendingAudio);
-        setPendingAudio(null);
+      // If we have pending message, speak it
+      if (pendingMessage) {
+        speakWithBrowserTTS(pendingMessage);
+        setPendingMessage(null);
       }
     };
 
@@ -37,113 +37,80 @@ export function SpeechBubble({ message, isMuted = false, onSpeakingChange }: Spe
       window.removeEventListener('keydown', handleInteraction);
       window.removeEventListener('touchstart', handleInteraction);
     };
-  }, [pendingAudio]);
+  }, [pendingMessage]);
 
   // Speak message when it changes
   useEffect(() => {
     if (!message || message === lastSpokenMessage.current || isMuted) return;
     
     lastSpokenMessage.current = message;
-    generateSpeech(message);
+    
+    if (userHasInteracted) {
+      speakWithBrowserTTS(message);
+    } else {
+      setPendingMessage(message);
+    }
   }, [message, isMuted]);
 
-  // Stop audio when muted
+  // Stop speech when muted
   useEffect(() => {
-    if (isMuted && audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-      onSpeakingChange?.(false);
-    }
-  }, [isMuted, onSpeakingChange]);
-
-  const playAudio = async (audioContent: string) => {
-    try {
-      // Stop any existing audio
+    if (isMuted) {
+      window.speechSynthesis?.cancel();
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current = null;
       }
-      
+      onSpeakingChange?.(false);
+    }
+  }, [isMuted, onSpeakingChange]);
+
+  // Use browser's free Web Speech API
+  const speakWithBrowserTTS = (text: string) => {
+    if (!window.speechSynthesis) {
+      console.log('[SpeechBubble] Web Speech API not supported');
+      return;
+    }
+
+    // Cancel any ongoing speech
+    window.speechSynthesis.cancel();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    
+    // Try to get a good voice
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(v => 
+      v.lang.startsWith('en') && (v.name.includes('Male') || v.name.includes('Daniel') || v.name.includes('David'))
+    ) || voices.find(v => v.lang.startsWith('en')) || voices[0];
+    
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+    
+    utterance.rate = 1.0;
+    utterance.pitch = 0.9;
+    
+    utterance.onstart = () => {
       onSpeakingChange?.(true);
-      
-      const audio = new Audio(`data:audio/mpeg;base64,${audioContent}`);
-      audioRef.current = audio;
-      
-      audio.onended = () => {
-        onSpeakingChange?.(false);
-        setPendingAudio(null);
-      };
-      audio.onerror = (e) => {
-        console.error('[SpeechBubble] Audio error:', e);
-        onSpeakingChange?.(false);
-        setPendingAudio(null);
-      };
-      
-      await audio.play();
-      setPendingAudio(null);
-    } catch (error: unknown) {
-      const err = error as Error;
-      if (err.name === 'NotAllowedError') {
-        console.log('[SpeechBubble] Autoplay blocked, waiting for user interaction');
-        setPendingAudio(audioContent);
-        onSpeakingChange?.(false);
-      } else {
-        console.error('[SpeechBubble] Play error:', error);
-        onSpeakingChange?.(false);
-      }
-    }
-  };
+      setPendingMessage(null);
+    };
+    
+    utterance.onend = () => {
+      onSpeakingChange?.(false);
+    };
+    
+    utterance.onerror = () => {
+      onSpeakingChange?.(false);
+    };
 
-  const generateSpeech = async (text: string) => {
-    try {
-      setIsLoading(true);
-      
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-      
-      if (!supabaseUrl || !supabaseKey) {
-        console.log('[SpeechBubble] No Supabase config for TTS');
-        setIsLoading(false);
-        return;
-      }
-
-      const response = await fetch(`${supabaseUrl}/functions/v1/octo-tts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${supabaseKey}`,
-        },
-        body: JSON.stringify({ text }),
-      });
-
-      setIsLoading(false);
-
-      if (!response.ok) {
-        console.error('[SpeechBubble] TTS failed:', response.status);
-        return;
-      }
-
-      const data = await response.json();
-      
-      if (data.audioContent) {
-        if (userHasInteracted) {
-          await playAudio(data.audioContent);
-        } else {
-          // Store for later when user interacts
-          setPendingAudio(data.audioContent);
-          console.log('[SpeechBubble] Audio ready, waiting for user interaction');
-        }
-      }
-    } catch (error) {
-      console.error('[SpeechBubble] TTS error:', error);
-      setIsLoading(false);
-    }
+    window.speechSynthesis.speak(utterance);
   };
 
   const handlePlayClick = () => {
     userHasInteracted = true;
-    if (pendingAudio) {
-      playAudio(pendingAudio);
+    if (pendingMessage) {
+      speakWithBrowserTTS(pendingMessage);
+    } else if (message) {
+      speakWithBrowserTTS(message);
     }
   };
 
@@ -159,8 +126,8 @@ export function SpeechBubble({ message, isMuted = false, onSpeakingChange }: Spe
         >
           {/* Speech bubble */}
           <div className="relative bg-card border border-border/50 p-4 shadow-lg rounded-lg">
-            {/* Play button if audio is pending */}
-            {pendingAudio && !isMuted && (
+            {/* Play button if waiting for interaction */}
+            {pendingMessage && !isMuted && (
               <button
                 onClick={handlePlayClick}
                 className="absolute -top-2 -right-2 w-8 h-8 bg-emerald-500 hover:bg-emerald-400 rounded-full flex items-center justify-center shadow-lg transition-colors z-10"
