@@ -175,31 +175,31 @@ function Index() {
                 </div>
                 
                 {/* HP Bar below octopus */}
-                <div className="w-full mt-4">
+                <div className="w-full mt-8 flex flex-col items-center">
                   <LifeBar state={state} />
-                </div>
-                
-                {/* Death message */}
-                {state.isDead && (
-                  <motion.div
+                  
+                  {/* Death message */}
+                  {state.isDead && (
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-sm text-foreground-light/50 font-mono mt-4 text-center"
+                    >
+                      Octo Claude has ceased to exist
+                    </motion.div>
+                  )}
+                  
+                  {/* Description */}
+                  <motion.p
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="text-sm text-foreground-light/50 font-mono mt-4 text-center"
+                    transition={{ delay: 1 }}
+                    className="text-center text-xs text-foreground-light/40 max-w-md mt-6 px-4"
                   >
-                    Octo Claude has ceased to exist
-                  </motion.div>
-                )}
-                
-                {/* Description */}
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 1 }}
-                  className="text-center text-xs text-foreground-light/40 max-w-md mt-4 px-4"
-                >
-                  Octo Claude is a living AI agent that responds, writes, and survives on donations. 
-                  When funding stops and time runs out, it dies forever.
-                </motion.p>
+                    Octo Claude is a living AI agent that responds, writes, and survives on donations. 
+                    When funding stops and time runs out, it dies forever.
+                  </motion.p>
+                </div>
                 
                 {/* Mobile donation window */}
                 <div className="lg:hidden mt-6 w-full max-w-sm">
