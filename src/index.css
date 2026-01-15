@@ -1,96 +1,75 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    /* Octo Claude Design System - Low-poly Geometric Aesthetic */
+    
+    /* Orange coral background */
+    --background: 18 90% 55%;
+    --background-deep: 18 85% 48%;
+    --background-muted: 18 75% 60%;
+    
+    /* Text colors */
+    --foreground: 210 60% 12%;
+    --foreground-light: 0 0% 100%;
+    
+    /* Teal/Cyan octopus colors */
+    --primary: 185 55% 55%;
+    --primary-light: 185 65% 75%;
+    --primary-dark: 195 60% 35%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Deep navy accents */
+    --secondary: 210 70% 20%;
+    --secondary-foreground: 185 55% 75%;
+    
+    /* Card surfaces - semi-transparent dark */
+    --card: 210 50% 15%;
+    --card-foreground: 0 0% 95%;
+    --card-glass: 210 50% 15% / 0.85;
+    
+    --popover: 210 50% 15%;
+    --popover-foreground: 0 0% 95%;
+    
+    --muted: 210 30% 25%;
+    --muted-foreground: 0 0% 70%;
+    
+    --accent: 35 90% 60%;
+    --accent-foreground: 210 60% 12%;
+    
+    --destructive: 0 70% 50%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --border: 185 30% 40%;
+    --input: 210 30% 25%;
+    --ring: 185 55% 55%;
+    
+    --radius: 0.75rem;
+    
+    /* Life state colors */
+    --alive: 185 55% 55%;
+    --starving: 45 80% 55%;
+    --dying: 0 60% 50%;
+    --dead: 210 10% 35%;
+    
+    /* Shadows and glows */
+    --glow-primary: 0 0 40px hsl(185 55% 55% / 0.4);
+    --glow-alive: 0 0 60px hsl(185 55% 55% / 0.3);
+    --shadow-deep: 0 20px 60px hsl(210 60% 12% / 0.4);
+    
+    /* Sidebar (not used but keeping for shadcn compat) */
+    --sidebar-background: 210 50% 15%;
+    --sidebar-foreground: 0 0% 95%;
+    --sidebar-primary: 185 55% 55%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 210 30% 25%;
+    --sidebar-accent-foreground: 0 0% 95%;
+    --sidebar-border: 185 30% 40%;
+    --sidebar-ring: 185 55% 55%;
   }
 }
 
@@ -100,6 +79,140 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Space Grotesk', sans-serif;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 600;
+  }
+
+  code, pre {
+    font-family: 'JetBrains Mono', monospace;
+  }
+}
+
+@layer components {
+  /* Glass panel effect */
+  .glass-panel {
+    @apply bg-card/85 backdrop-blur-md border border-border/30 rounded-lg;
+    box-shadow: var(--shadow-deep);
+  }
+  
+  /* Octopus glow effect */
+  .octo-glow {
+    filter: drop-shadow(var(--glow-primary));
+  }
+  
+  /* Text with glow */
+  .text-glow {
+    text-shadow: 0 0 20px hsl(var(--primary) / 0.5);
+  }
+  
+  /* Breathing animation for alive state */
+  .breathing {
+    animation: breathe 4s ease-in-out infinite;
+  }
+  
+  /* Slow breathing for starving */
+  .breathing-slow {
+    animation: breathe 8s ease-in-out infinite;
+  }
+  
+  /* Minimal twitch for dying */
+  .twitching {
+    animation: twitch 6s ease-in-out infinite;
+  }
+  
+  /* Chat message styles */
+  .chat-message {
+    @apply p-3 rounded-lg bg-secondary/50 border border-border/20;
+  }
+  
+  /* Writing card */
+  .writing-card {
+    @apply p-6 glass-panel transition-all duration-300;
+  }
+  
+  .writing-card:hover {
+    @apply border-primary/50;
+    box-shadow: var(--glow-alive);
+  }
+  
+  /* Scrollbar styling */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: hsl(var(--muted) / 0.3);
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--primary) / 0.5);
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.7);
+  }
+}
+
+@layer utilities {
+  /* Noise texture overlay */
+  .noise-overlay {
+    position: relative;
+  }
+  
+  .noise-overlay::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+    opacity: 0.03;
+    pointer-events: none;
+    mix-blend-mode: overlay;
+  }
+}
+
+@keyframes breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes twitch {
+  0%, 90%, 100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  92% {
+    transform: translate(1px, -1px) rotate(0.5deg);
+  }
+  95% {
+    transform: translate(-1px, 1px) rotate(-0.5deg);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 20px hsl(185 55% 55% / 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 40px hsl(185 55% 55% / 0.5));
   }
 }
