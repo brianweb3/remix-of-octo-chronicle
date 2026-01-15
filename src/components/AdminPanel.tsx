@@ -15,12 +15,17 @@ export function AdminPanel({ currentTokenMint, onTokenChange, isPumpfunConnected
   const [tokenInput, setTokenInput] = useState(currentTokenMint);
   const [saved, setSaved] = useState(false);
 
-  // Secret key combo: Ctrl + Shift + P (for Pump)
+  // Secret key combo: Ctrl/Cmd + Shift + A (for Admin)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.shiftKey && e.key === 'P') {
+      // Check for Ctrl+Shift+A or Cmd+Shift+A (works on Mac and Windows)
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const modifier = isMac ? e.metaKey : e.ctrlKey;
+      
+      if (modifier && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
         e.preventDefault();
         setIsOpen(prev => !prev);
+        console.log('[AdminPanel] Toggled via keyboard shortcut');
       }
       // Also ESC to close
       if (e.key === 'Escape' && isOpen) {
@@ -121,7 +126,7 @@ export function AdminPanel({ currentTokenMint, onTokenChange, isPumpfunConnected
 
           {/* Hint */}
           <p className="text-xs text-white/30 font-mono text-center pt-2">
-            Press Ctrl+Shift+P to toggle this panel
+            Press ⌘/Ctrl + Shift + A to toggle this panel
           </p>
         </div>
       </div>

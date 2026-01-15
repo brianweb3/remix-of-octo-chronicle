@@ -72,6 +72,7 @@ export function useOctoState() {
   const chatServiceRef = useRef<PumpfunChatService | null>(null);
   const mockChatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastHPRef = useRef(hp);
+  const isInitialLoadRef = useRef(true); // Prevent notification on initial load
   
   const lifeState = getLifeState(hp);
   
@@ -207,12 +208,19 @@ export function useOctoState() {
     }
   };
   
-  // Check for new donations and show notification
+  // Check for new donations and show notification (skip initial load)
   useEffect(() => {
+    if (isInitialLoadRef.current) {
+      // Skip notification on initial load, just update the ref
+      isInitialLoadRef.current = false;
+      lastHPRef.current = hp;
+      return;
+    }
+    
     if (hp > lastHPRef.current && !isDead) {
       const hpAdded = hp - lastHPRef.current;
       toast({
-        title: "Wallet funded",
+        title: "💰 Donation received!",
         description: `Octo Claude's life extended by +${hpAdded} minute${hpAdded > 1 ? 's' : ''}.`,
       });
     }

@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion';
+import { ExternalLink } from 'lucide-react';
 import { DONATION_TABLE } from '@/types/octo';
 
 interface Donation {
@@ -118,25 +119,31 @@ export function DonationWindow({ walletAddress, recentDonations, totalHPReceived
         Recent
       </div>
       
-      <div className="space-y-2 max-h-24 overflow-y-auto custom-scrollbar mb-4">
+      <div className="space-y-2 max-h-32 overflow-y-auto custom-scrollbar mb-4">
         {recentDonations.length > 0 ? (
           recentDonations.map((donation) => (
-            <div 
+            <a 
               key={donation.id}
-              className="flex items-center justify-between text-xs p-2 bg-secondary/20"
+              href={`https://solscan.io/tx/${donation.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between text-xs p-2 bg-secondary/20 hover:bg-secondary/40 transition-colors group cursor-pointer"
             >
               <div className="flex items-center gap-2">
                 <span className="text-foreground-light/80 font-mono">
-                  {donation.amount} SOL
+                  {donation.amount.toFixed(4)} SOL
                 </span>
                 <span className="text-primary/60 font-mono">
                   +{donation.hpAdded} HP
                 </span>
               </div>
-              <span className="text-muted-foreground">
-                {formatRelativeTime(donation.timestamp)}
-              </span>
-            </div>
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted-foreground">
+                  {formatRelativeTime(donation.timestamp)}
+                </span>
+                <ExternalLink className="w-3 h-3 text-muted-foreground/50 group-hover:text-primary/70" />
+              </div>
+            </a>
           ))
         ) : (
           <div className="text-center py-3 text-muted-foreground/60">
