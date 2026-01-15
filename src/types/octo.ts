@@ -59,7 +59,8 @@ export function donationToHP(amountSOL: number): number {
 // CANONICAL constants
 export const MAX_HP = 720; // 12 hours = 720 minutes
 export const INITIAL_HP = 10; // Start with 10 minutes
-export const WALLET_ADDRESS = '8ejAYL1hNeJreUxTfwUQ5QVay7dN5FCbaEiQspiciVxw';
+export const WALLET_ADDRESS = '8ejAYL1hNeJreUxTfwUQ5QVay7dN5FCbaEiQspiciVxw'; // Donation wallet
+export const CONTRACT_ADDRESS = 'Hxs6ff3NVNk3yjCPH9Z5UtpHmodPD6WLpiWsmXWGpump'; // Token CA
 export const HELIUS_RPC = 'https://mainnet.helius-rpc.com/?api-key=c5040336-825d-42e6-a592-59ef6633316c';
 
 // Donation table for display

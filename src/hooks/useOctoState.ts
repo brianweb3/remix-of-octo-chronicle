@@ -9,7 +9,8 @@ import {
   donationToHP,
   MAX_HP,
   INITIAL_HP,
-  WALLET_ADDRESS
+  WALLET_ADDRESS,
+  CONTRACT_ADDRESS
 } from '@/types/octo';
 import { getPumpfunChatService, PumpfunChatService } from '@/services/pumpfunChat';
 import { getWalletMonitorService, WalletTransaction } from '@/services/walletMonitor';
@@ -656,7 +657,7 @@ export function useOctoState() {
     highlightedMessageId,
     walletAddress: WALLET_ADDRESS,
     walletBalance,
-    contractAddress: WALLET_ADDRESS, // Same as wallet for now
+    contractAddress: CONTRACT_ADDRESS, // Token CA
     // Pump.fun integration
     pumpfunTokenMint,
     setPumpfunToken,
