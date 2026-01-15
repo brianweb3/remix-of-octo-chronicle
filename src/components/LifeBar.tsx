@@ -48,7 +48,7 @@ export function LifeBar({ state }: LifeBarProps) {
       className="w-full max-w-md mx-auto"
     >
       {/* HP info header */}
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-1 gap-4">
         <div className="flex items-center gap-3">
           <span className={`text-sm font-bold ${getTextColor()} font-mono`}>
             HP: {formattedHP}
@@ -58,7 +58,7 @@ export function LifeBar({ state }: LifeBarProps) {
           </span>
         </div>
         
-        <span className={`text-xs uppercase tracking-widest font-mono ${getTextColor()}`}>
+        <span className={`text-xs uppercase tracking-widest font-mono ${getTextColor()} shrink-0`}>
           {lifeState}
         </span>
       </div>
