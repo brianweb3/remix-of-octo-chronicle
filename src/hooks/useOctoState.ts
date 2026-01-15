@@ -49,6 +49,7 @@ export function useOctoState() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [donations] = useState<Donation[]>(MOCK_DONATIONS);
   const [currentResponse, setCurrentResponse] = useState<string | null>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [totalHPReceived] = useState(MOCK_DONATIONS.reduce((acc, d) => acc + d.hpAdded, 0));
   const [isLoadingResponse, setIsLoadingResponse] = useState(false);
   
@@ -134,10 +135,16 @@ export function useOctoState() {
   }, []);
   
   // Generate AI response and speak it
-  const generateResponse = useCallback(async (chatMessage?: string) => {
+  const generateResponse = useCallback(async (chatMessage?: string, messageId?: string) => {
     if (isDead || isLoadingResponse) return;
     
     setIsLoadingResponse(true);
+    
+    // Highlight the message being responded to
+    if (messageId) {
+      setHighlightedMessageId(messageId);
+    }
+    
     console.log('Generating response for:', chatMessage);
     
     try {
@@ -159,6 +166,7 @@ export function useOctoState() {
       if (!response.ok) {
         console.error('Response not ok:', response.status);
         setIsLoadingResponse(false);
+        setHighlightedMessageId(null);
         return;
       }
       
@@ -181,12 +189,16 @@ export function useOctoState() {
       // Speak the response
       await speak(octoResponse);
       
-      // Clear speech bubble after display
+      // Clear speech bubble and highlight after display
       const displayTime = Math.max(6000, octoResponse.length * 100);
-      setTimeout(() => setCurrentResponse(null), displayTime);
+      setTimeout(() => {
+        setCurrentResponse(null);
+        setHighlightedMessageId(null);
+      }, displayTime);
       
     } catch (error) {
       console.error('Failed to get AI response:', error);
+      setHighlightedMessageId(null);
     }
     
     setIsLoadingResponse(false);
@@ -200,15 +212,16 @@ export function useOctoState() {
     const initialTimeout = setTimeout(() => {
       if (!hasRespondedRef.current) {
         hasRespondedRef.current = true;
-        generateResponse('Hello, I am here');
+        generateResponse('Hello, I am here', undefined);
       }
     }, 5000);
     
     // Then respond every 15-25 seconds
     const interval = setInterval(() => {
-      const lastMessage = chatMessages.filter(m => !m.isOctoResponse).pop();
+      const nonOctoMessages = chatMessages.filter(m => !m.isOctoResponse);
+      const lastMessage = nonOctoMessages[nonOctoMessages.length - 1];
       if (lastMessage && Math.random() < 0.7) {
-        generateResponse(lastMessage.content);
+        generateResponse(lastMessage.content, lastMessage.id);
       }
     }, 15000 + Math.random() * 10000);
     
@@ -303,6 +316,7 @@ export function useOctoState() {
     donations,
     totalHPReceived,
     currentResponse,
+    highlightedMessageId,
     walletAddress: MOCK_WALLET,
     contractAddress: MOCK_CONTRACT,
     addDonation,

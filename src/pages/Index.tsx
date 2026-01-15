@@ -22,6 +22,7 @@ const Index = () => {
     donations, 
     totalHPReceived,
     currentResponse,
+    highlightedMessageId,
     walletAddress, 
     contractAddress 
   } = useOctoState();
@@ -135,7 +136,7 @@ const Index = () => {
                 transition={{ duration: 0.6, delay: 0.4 }}
                 className="lg:col-span-1 h-[400px] lg:h-[500px]"
               >
-                <ChatFeed messages={chatMessages} />
+                <ChatFeed messages={chatMessages} highlightedMessageId={highlightedMessageId} />
               </motion.div>
             </div>
           </section>

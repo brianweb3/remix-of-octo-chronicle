@@ -3,9 +3,10 @@ import { ChatMessage } from '@/types/octo';
 
 interface ChatFeedProps {
   messages: ChatMessage[];
+  highlightedMessageId?: string | null;
 }
 
-export function ChatFeed({ messages }: ChatFeedProps) {
+export function ChatFeed({ messages, highlightedMessageId }: ChatFeedProps) {
   return (
     <div className="glass-panel h-full flex flex-col overflow-hidden">
       {/* Header with Pumpfun branding - no rounded corners */}
@@ -19,38 +20,59 @@ export function ChatFeed({ messages }: ChatFeedProps) {
       
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
         <AnimatePresence mode="popLayout">
-          {messages.map((message) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.3 }}
-              className={`p-3 border border-border/20 ${
-                message.isOctoResponse 
-                  ? 'bg-primary/10 border-primary/30' 
-                  : 'bg-secondary/40'
-              }`}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-medium font-mono ${
-                  message.isOctoResponse ? 'text-primary' : 'text-primary/70'
+          {messages.map((message) => {
+            const isHighlighted = message.id === highlightedMessageId;
+            
+            return (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ 
+                  opacity: 1, 
+                  y: 0,
+                  scale: isHighlighted ? 1.02 : 1,
+                }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className={`p-3 border transition-all duration-300 ${
+                  message.isOctoResponse 
+                    ? 'bg-primary/10 border-primary/30' 
+                    : isHighlighted
+                      ? 'bg-amber-500/20 border-amber-500/50 ring-2 ring-amber-500/30'
+                      : 'bg-secondary/40 border-border/20'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs font-medium font-mono ${
+                      message.isOctoResponse ? 'text-primary' : isHighlighted ? 'text-amber-400' : 'text-primary/70'
+                    }`}>
+                      {message.author}
+                    </span>
+                    {isHighlighted && (
+                      <motion.span
+                        initial={{ opacity: 0, scale: 0.8 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="text-[10px] text-amber-400 uppercase tracking-wider"
+                      >
+                        ← responding to
+                      </motion.span>
+                    )}
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {formatTime(message.timestamp)}
+                  </span>
+                </div>
+                <p className={`text-sm leading-relaxed ${
+                  message.isOctoResponse 
+                    ? 'text-foreground-light italic' 
+                    : 'text-foreground-light/90'
                 }`}>
-                  {message.author}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {formatTime(message.timestamp)}
-                </span>
-              </div>
-              <p className={`text-sm leading-relaxed ${
-                message.isOctoResponse 
-                  ? 'text-foreground-light italic' 
-                  : 'text-foreground-light/90'
-              }`}>
-                {message.content}
-              </p>
-            </motion.div>
-          ))}
+                  {message.content}
+                </p>
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
         
         {messages.length === 0 && (
