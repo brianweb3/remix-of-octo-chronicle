@@ -101,14 +101,19 @@ function Index() {
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
-                className="lg:col-span-2 relative flex flex-col items-center justify-center"
+                className="lg:col-span-2 relative flex flex-col"
               >
-                {/* Speech bubble */}
-                <SpeechBubble message={currentResponse} />
-                
-                {/* 3D Scene container */}
-                <div className="w-full h-[400px] lg:h-[450px] relative">
-                  <OctopusScene lifeState={state.lifeState} hp={state.hp} isDead={state.isDead} />
+                {/* Octopus + Speech bubble layout */}
+                <div className="flex items-start justify-center gap-4">
+                  {/* 3D Scene container - left side */}
+                  <div className="w-[55%] h-[400px] lg:h-[450px] relative flex-shrink-0">
+                    <OctopusScene lifeState={state.lifeState} hp={state.hp} isDead={state.isDead} />
+                  </div>
+                  
+                  {/* Speech bubble - right side */}
+                  <div className="flex-1 pt-8">
+                    <SpeechBubble message={currentResponse} />
+                  </div>
                 </div>
                 
                 {/* HP Bar below octopus */}
