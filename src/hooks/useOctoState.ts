@@ -173,11 +173,12 @@ export function useOctoState() {
     return () => clearInterval(interval);
   }, [isDead]);
   
-  // Octo sometimes responds to chat (selective, based on life state)
+  // Octo responds to chat messages (selective, based on life state)
   useEffect(() => {
     if (isDead) return;
     
-    const responseChance = lifeState === 'alive' ? 0.3 : lifeState === 'starving' ? 0.15 : 0.05;
+    // Response chance based on life state - more frequent when alive
+    const responseChance = lifeState === 'alive' ? 0.6 : lifeState === 'starving' ? 0.3 : 0.1;
     
     const interval = setInterval(() => {
       if (Math.random() < responseChance) {
@@ -196,10 +197,11 @@ export function useOctoState() {
         };
         setChatMessages(prev => [...prev.slice(-20), newMessage]);
         
-        // Clear speech bubble after a few seconds
-        setTimeout(() => setCurrentResponse(null), 5000);
+        // Clear speech bubble after typing finishes + reading time
+        const displayTime = Math.max(4000, response.length * 80);
+        setTimeout(() => setCurrentResponse(null), displayTime);
       }
-    }, 20000);
+    }, 8000); // Check every 8 seconds for more frequent responses
     
     return () => clearInterval(interval);
   }, [isDead, lifeState]);

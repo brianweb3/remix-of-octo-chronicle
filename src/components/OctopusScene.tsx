@@ -222,6 +222,8 @@ export function OctopusScene({ lifeState, isDead = false }: OctopusSceneProps) {
             autoRotateSpeed={effectiveLifeState === 'alive' ? 0.4 : 0.15}
             minPolarAngle={Math.PI / 2.5}
             maxPolarAngle={Math.PI / 2}
+            minAzimuthAngle={-Math.PI / 4}
+            maxAzimuthAngle={Math.PI / 4}
             target={[0, 0, 0]}
           />
         </Canvas>

@@ -13,25 +13,32 @@ export function SpeechBubble({ message }: SpeechBubbleProps) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: -10, scale: 0.9 }}
           transition={{ duration: 0.3 }}
-          className="absolute top-4 left-1/2 -translate-x-1/2 z-20 max-w-xs"
+          className="absolute top-8 left-1/2 -translate-x-1/2 z-20 max-w-sm"
         >
-          <div className="bg-card border border-border/50 p-3 relative">
+          {/* Cloud-like speech bubble */}
+          <div className="relative bg-card border border-border/50 p-4 shadow-lg">
+            {/* Bubble content */}
             <TypewriterText text={message} />
-            {/* Sharp speech bubble pointer */}
+            
+            {/* Sharp pointer pointing down to octopus */}
             <div 
-              className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-0 h-0"
+              className="absolute -bottom-3 left-1/2 -translate-x-1/2"
               style={{
-                borderLeft: '8px solid transparent',
-                borderRight: '8px solid transparent',
-                borderTop: '8px solid hsl(var(--border) / 0.5)',
+                width: 0,
+                height: 0,
+                borderLeft: '12px solid transparent',
+                borderRight: '12px solid transparent',
+                borderTop: '12px solid hsl(var(--border) / 0.5)',
               }}
             />
             <div 
-              className="absolute -bottom-[6px] left-1/2 -translate-x-1/2 w-0 h-0"
+              className="absolute -bottom-[10px] left-1/2 -translate-x-1/2"
               style={{
-                borderLeft: '6px solid transparent',
-                borderRight: '6px solid transparent',
-                borderTop: '6px solid hsl(var(--card))',
+                width: 0,
+                height: 0,
+                borderLeft: '10px solid transparent',
+                borderRight: '10px solid transparent',
+                borderTop: '10px solid hsl(var(--card))',
               }}
             />
           </div>
@@ -43,8 +50,8 @@ export function SpeechBubble({ message }: SpeechBubbleProps) {
 
 function TypewriterText({ text }: { text: string }) {
   return (
-    <motion.span 
-      className="text-sm text-foreground-light/90 font-mono"
+    <motion.p 
+      className="text-sm text-foreground-light/90 font-mono leading-relaxed"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
@@ -58,6 +65,6 @@ function TypewriterText({ text }: { text: string }) {
           {char}
         </motion.span>
       ))}
-    </motion.span>
+    </motion.p>
   );
 }
