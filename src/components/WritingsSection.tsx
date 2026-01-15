@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Writing } from '@/types/octo';
 
 interface WritingsSectionProps {
@@ -7,7 +6,8 @@ interface WritingsSectionProps {
 }
 
 export function WritingsSection({ writings }: WritingsSectionProps) {
-  const [selectedWriting, setSelectedWriting] = useState<Writing | null>(null);
+  // Sort writings by date, newest first
+  const sortedWritings = [...writings].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 
   return (
     <section className="py-16 px-4">
@@ -30,106 +30,43 @@ export function WritingsSection({ writings }: WritingsSectionProps) {
           Observations from existence
         </motion.p>
         
-        {/* Writings tabs/list */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left: Article list */}
-          <div className="lg:col-span-1 space-y-3">
-            {writings.map((writing, index) => (
-              <motion.button
-                key={writing.id}
-                initial={{ opacity: 0, x: -20 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.05 }}
-                onClick={() => setSelectedWriting(writing)}
-                className={`w-full text-left p-4 rounded-lg transition-all duration-300 border ${
-                  selectedWriting?.id === writing.id
-                    ? 'bg-primary/20 border-primary/50'
-                    : 'bg-card/60 border-border/30 hover:bg-card/80 hover:border-primary/30'
-                }`}
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <div 
-                    className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                      writing.lifeState === 'alive' ? 'bg-alive' :
-                      writing.lifeState === 'starving' ? 'bg-starving' :
-                      writing.lifeState === 'dying' ? 'bg-dying' : 'bg-dead'
-                    }`}
-                  />
-                  <time className="text-xs text-muted-foreground uppercase tracking-wide">
-                    {formatDate(writing.timestamp)}
-                  </time>
-                </div>
-                <p className="text-sm text-foreground-light/80 line-clamp-2">
-                  {writing.content.slice(0, 100)}...
-                </p>
-              </motion.button>
-            ))}
-            
-            {writings.length === 0 && (
-              <div className="text-center py-8 text-foreground-light/50 text-sm">
-                Waiting for thoughts to form...
+        {/* Full-width writings list */}
+        <div className="space-y-4">
+          {writings.map((writing, index) => (
+            <motion.article
+              key={writing.id}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: index * 0.05 }}
+              className="w-full p-6 bg-card/60 border border-border/30 transition-all duration-300 hover:border-primary/30"
+            >
+              {/* Article header */}
+              <div className="flex items-center gap-4 mb-4 pb-3 border-b border-border/20">
+                <time className="text-xs text-muted-foreground uppercase tracking-wide font-mono">
+                  {formatDateFull(writing.timestamp)}
+                </time>
+                <span className="text-xs text-foreground-light/40 uppercase tracking-widest font-mono">
+                  {writing.lifeState}
+                </span>
               </div>
-            )}
-          </div>
+              
+              {/* Article content */}
+              <p className="text-foreground-light/90 leading-relaxed whitespace-pre-line text-base">
+                {writing.content}
+              </p>
+            </motion.article>
+          ))}
           
-          {/* Right: Selected article reader */}
-          <div className="lg:col-span-2">
-            <AnimatePresence mode="wait">
-              {selectedWriting ? (
-                <motion.article
-                  key={selectedWriting.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="glass-panel p-8"
-                >
-                  <div className="flex items-center gap-3 mb-6">
-                    <div 
-                      className={`w-2 h-2 rounded-full ${
-                        selectedWriting.lifeState === 'alive' ? 'bg-alive' :
-                        selectedWriting.lifeState === 'starving' ? 'bg-starving' :
-                        selectedWriting.lifeState === 'dying' ? 'bg-dying' : 'bg-dead'
-                      }`}
-                    />
-                    <time className="text-xs text-muted-foreground uppercase tracking-wide">
-                      {formatDateFull(selectedWriting.timestamp)}
-                    </time>
-                    <span className="text-xs text-primary/60 capitalize">
-                      — {selectedWriting.lifeState}
-                    </span>
-                  </div>
-                  
-                  <div className="prose prose-invert max-w-none">
-                    <p className="text-foreground-light/90 leading-relaxed whitespace-pre-line text-base">
-                      {selectedWriting.content}
-                    </p>
-                  </div>
-                </motion.article>
-              ) : (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="glass-panel p-8 h-full min-h-[300px] flex items-center justify-center"
-                >
-                  <p className="text-foreground-light/40 text-sm text-center">
-                    Select a writing to read
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
+          {writings.length === 0 && (
+            <div className="text-center py-12 text-foreground-light/50 text-sm">
+              Waiting for thoughts to form...
+            </div>
+          )}
         </div>
       </div>
     </section>
   );
-}
-
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric'
-  });
 }
 
 function formatDateFull(date: Date): string {

@@ -65,23 +65,15 @@ const Index = () => {
             <div className="flex flex-col items-center gap-3 mt-4">
               <LifeBar state={state} />
               
+              {/* Minimal status indicator - no animation, neutral */}
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1.5 }}
               >
-                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/40 backdrop-blur-sm">
-                  <div 
-                    className={`w-2 h-2 rounded-full ${
-                      state.lifeState === 'alive' ? 'bg-alive animate-pulse-soft' :
-                      state.lifeState === 'starving' ? 'bg-starving' :
-                      state.lifeState === 'dying' ? 'bg-dying' : 'bg-dead'
-                    }`}
-                  />
-                  <span className="text-xs text-foreground-light/60 capitalize">
-                    {state.lifeState}
-                  </span>
-                </div>
+                <span className="text-xs text-foreground-light/50 uppercase tracking-widest font-mono">
+                  {state.lifeState}
+                </span>
               </motion.div>
             </div>
             

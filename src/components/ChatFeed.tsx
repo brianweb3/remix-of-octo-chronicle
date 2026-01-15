@@ -8,9 +8,9 @@ interface ChatFeedProps {
 export function ChatFeed({ messages }: ChatFeedProps) {
   return (
     <div className="glass-panel h-full flex flex-col overflow-hidden">
-      {/* Header with Pumpfun branding */}
+      {/* Header with Pumpfun branding - no rounded corners */}
       <div className="p-4 border-b border-border/30 flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+        <div className="w-1.5 h-1.5 bg-alive" />
         <h3 className="text-sm font-medium text-primary-light uppercase tracking-wider">
           Live Chat
         </h3>
@@ -26,7 +26,7 @@ export function ChatFeed({ messages }: ChatFeedProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
-              className="p-3 rounded-lg bg-secondary/40 border border-border/20"
+              className="p-3 bg-secondary/40 border border-border/20"
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="text-xs font-medium text-primary font-mono">
@@ -52,8 +52,8 @@ export function ChatFeed({ messages }: ChatFeedProps) {
       
       {/* Footer */}
       <div className="p-3 border-t border-border/20 text-center">
-        <span className="text-xs text-muted-foreground">
-          Connected to pump.fun
+        <span className="text-xs text-muted-foreground font-mono">
+          pump.fun
         </span>
       </div>
     </div>
