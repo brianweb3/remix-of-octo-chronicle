@@ -14,7 +14,75 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agent_state: {
+        Row: {
+          hp: number
+          id: string
+          is_dead: boolean
+          updated_at: string
+        }
+        Insert: {
+          hp?: number
+          id?: string
+          is_dead?: boolean
+          updated_at?: string
+        }
+        Update: {
+          hp?: number
+          id?: string
+          is_dead?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      transaction_history: {
+        Row: {
+          amount_sol: number
+          hp_added: number
+          id: string
+          timestamp: string
+          tx_hash: string
+        }
+        Insert: {
+          amount_sol: number
+          hp_added: number
+          id?: string
+          timestamp?: string
+          tx_hash: string
+        }
+        Update: {
+          amount_sol?: number
+          hp_added?: number
+          id?: string
+          timestamp?: string
+          tx_hash?: string
+        }
+        Relationships: []
+      }
+      writings: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          life_state: string
+          title: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          life_state: string
+          title: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          life_state?: string
+          title?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
