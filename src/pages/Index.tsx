@@ -9,6 +9,7 @@ import { DonationWindow } from '@/components/DonationWindow';
 import { ContractButton } from '@/components/ContractButton';
 import { TopNav } from '@/components/TopNav';
 import { SpeechBubble } from '@/components/SpeechBubble';
+import { AdminPanel } from '@/components/AdminPanel';
 import { useOctoState } from '@/hooks/useOctoState';
 
 type TabType = 'home' | 'x' | 'writings';
@@ -43,6 +44,12 @@ function Index() {
   
   return (
     <div className="min-h-screen bg-background noise-overlay">
+      {/* Hidden Admin Panel - Ctrl+Shift+P to toggle */}
+      <AdminPanel 
+        currentTokenMint={pumpfunTokenMint}
+        onTokenChange={setPumpfunToken}
+        isPumpfunConnected={isPumpfunConnected}
+      />
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 p-4 flex items-center justify-between bg-background/80 backdrop-blur-sm border-b border-border/20">
         <motion.div
