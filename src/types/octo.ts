@@ -2,8 +2,9 @@ export type LifeState = 'alive' | 'starving' | 'dying' | 'dead';
 
 export interface OctoState {
   lifeState: LifeState;
-  remainingSeconds: number;
-  maxSeconds: number;
+  xp: number; // 1 XP = 1 minute of life
+  maxXP: number;
+  isDead: boolean;
 }
 
 export interface Writing {
@@ -18,27 +19,40 @@ export interface ChatMessage {
   author: string;
   content: string;
   timestamp: Date;
+  isOctoResponse?: boolean;
 }
 
-// Helper to determine life state from remaining time
-export function getLifeState(remainingSeconds: number): LifeState {
-  const hours = remainingSeconds / 3600;
-  
-  if (remainingSeconds <= 0) return 'dead';
-  if (hours < 1) return 'dying';
-  if (hours < 6) return 'starving';
+export interface XPost {
+  id: string;
+  content: string;
+  timestamp: Date;
+}
+
+// Life state thresholds based on XP
+// Alive: > 60 XP
+// Starving: 15-60 XP
+// Dying: 1-14 XP
+// Dead: 0 XP
+export function getLifeState(xp: number): LifeState {
+  if (xp <= 0) return 'dead';
+  if (xp < 15) return 'dying';
+  if (xp <= 60) return 'starving';
   return 'alive';
 }
 
-// Mock donation amounts to time conversion
-export function donationToSeconds(amount: number): number {
-  if (amount < 0.001) return 0;
-  if (amount >= 1.0) return 24 * 3600;
-  if (amount >= 0.5) return 12 * 3600;
-  if (amount >= 0.1) return 2 * 3600;
-  if (amount >= 0.05) return 45 * 60;
-  if (amount >= 0.01) return 7 * 60;
-  if (amount >= 0.005) return 3 * 60;
-  if (amount >= 0.002) return 60;
-  return 30;
+// Canonical donation to XP conversion
+// 0.01 SOL = 1 XP = 1 minute
+export function donationToXP(amountSOL: number): number {
+  if (amountSOL < 0.01) return 0; // Below minimum, no XP added
+  return Math.floor(amountSOL * 100); // 0.01 SOL = 1 XP
 }
+
+// Donation table for display
+export const DONATION_TABLE = [
+  { sol: 0.01, xp: 1, time: '1 minute' },
+  { sol: 0.05, xp: 5, time: '5 minutes' },
+  { sol: 0.1, xp: 10, time: '10 minutes' },
+  { sol: 0.25, xp: 25, time: '25 minutes' },
+  { sol: 0.5, xp: 50, time: '50 minutes' },
+  { sol: 1.0, xp: 100, time: '100 minutes' },
+];

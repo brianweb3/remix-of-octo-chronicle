@@ -185,9 +185,12 @@ function LowPolyOctopus({ lifeState }: OctopusProps) {
 
 interface OctopusSceneProps {
   lifeState: LifeState;
+  isDead?: boolean;
 }
 
-export function OctopusScene({ lifeState }: OctopusSceneProps) {
+export function OctopusScene({ lifeState, isDead = false }: OctopusSceneProps) {
+  // When dead, force lifeState to 'dead' for animations
+  const effectiveLifeState = isDead ? 'dead' : lifeState;
   return (
     <div className="w-full h-full">
       <Suspense fallback={null}>
@@ -210,13 +213,13 @@ export function OctopusScene({ lifeState }: OctopusSceneProps) {
           />
           <hemisphereLight args={['#4ECDC4', '#FF6B35', 0.3]} />
           
-          <LowPolyOctopus lifeState={lifeState} />
+          <LowPolyOctopus lifeState={effectiveLifeState} />
           
           <OrbitControls 
             enableZoom={false}
             enablePan={false}
-            autoRotate={lifeState !== 'dead'}
-            autoRotateSpeed={lifeState === 'alive' ? 0.4 : 0.15}
+            autoRotate={!isDead && effectiveLifeState !== 'dead'}
+            autoRotateSpeed={effectiveLifeState === 'alive' ? 0.4 : 0.15}
             minPolarAngle={Math.PI / 2.5}
             maxPolarAngle={Math.PI / 2}
             target={[0, 0, 0]}

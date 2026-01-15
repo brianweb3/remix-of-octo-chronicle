@@ -26,17 +26,27 @@ export function ChatFeed({ messages }: ChatFeedProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
-              className="p-3 bg-secondary/40 border border-border/20"
+              className={`p-3 border border-border/20 ${
+                message.isOctoResponse 
+                  ? 'bg-primary/10 border-primary/30' 
+                  : 'bg-secondary/40'
+              }`}
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-primary font-mono">
+                <span className={`text-xs font-medium font-mono ${
+                  message.isOctoResponse ? 'text-primary' : 'text-primary/70'
+                }`}>
                   {message.author}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {formatTime(message.timestamp)}
                 </span>
               </div>
-              <p className="text-sm text-foreground-light/90 leading-relaxed">
+              <p className={`text-sm leading-relaxed ${
+                message.isOctoResponse 
+                  ? 'text-foreground-light italic' 
+                  : 'text-foreground-light/90'
+              }`}>
                 {message.content}
               </p>
             </motion.div>
