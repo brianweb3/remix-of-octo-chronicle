@@ -36,6 +36,8 @@ function Index() {
     pumpfunTokenMint,
     setPumpfunToken,
     isPumpfunConnected,
+    // Manual chat
+    addChatMessage,
   } = useOctoState();
   
   // Sound state - persisted in localStorage
@@ -70,6 +72,7 @@ function Index() {
         onTokenChange={setPumpfunToken}
         isPumpfunConnected={isPumpfunConnected}
         currentHp={state.hp}
+        onAddChatMessage={addChatMessage}
       />
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 p-4 flex items-center justify-between bg-background/80 backdrop-blur-sm border-b border-border/20">

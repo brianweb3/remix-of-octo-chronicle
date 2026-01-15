@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, Settings, Check, Heart } from 'lucide-react';
+import { X, Settings, Check, Heart, MessageSquare, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,15 +11,18 @@ interface AdminPanelProps {
   isPumpfunConnected: boolean;
   currentHp?: number;
   onHpChange?: (hp: number) => void;
+  onAddChatMessage?: (author: string, content: string) => void;
 }
 
-export function AdminPanel({ currentTokenMint, onTokenChange, isPumpfunConnected, currentHp = 100, onHpChange }: AdminPanelProps) {
+export function AdminPanel({ currentTokenMint, onTokenChange, isPumpfunConnected, currentHp = 100, onHpChange, onAddChatMessage }: AdminPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [tokenInput, setTokenInput] = useState(currentTokenMint);
   const [hpInput, setHpInput] = useState(currentHp.toString());
   const [saved, setSaved] = useState(false);
   const [hpSaved, setHpSaved] = useState(false);
   const [hpSaving, setHpSaving] = useState(false);
+  const [chatAuthor, setChatAuthor] = useState('anon');
+  const [chatMessage, setChatMessage] = useState('');
 
   // Secret key combo: Ctrl/Cmd + Shift + A (for Admin)
   useEffect(() => {
@@ -101,6 +104,19 @@ export function AdminPanel({ currentTokenMint, onTokenChange, isPumpfunConnected
     }
   };
 
+  const handleAddChatMessage = () => {
+    if (chatMessage.trim() && onAddChatMessage) {
+      onAddChatMessage(chatAuthor.trim() || 'anon', chatMessage.trim());
+      setChatMessage('');
+    }
+  };
+
+  const handleChatKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleAddChatMessage();
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -130,6 +146,39 @@ export function AdminPanel({ currentTokenMint, onTokenChange, isPumpfunConnected
             <span className="text-white/60 font-mono">
               pump.fun: {isPumpfunConnected ? 'connected' : 'disconnected'}
             </span>
+          </div>
+
+          {/* Chat Message Input */}
+          <div className="space-y-2 p-3 bg-white/5 rounded-lg border border-white/10">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-blue-400" />
+              <Label className="text-white/70 font-mono text-sm">
+                Add Chat Message
+              </Label>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                value={chatAuthor}
+                onChange={(e) => setChatAuthor(e.target.value)}
+                placeholder="Author..."
+                className="w-24 bg-white/5 border-white/20 text-white font-mono text-xs placeholder:text-white/30 focus:border-white/40"
+              />
+              <Input
+                value={chatMessage}
+                onChange={(e) => setChatMessage(e.target.value)}
+                onKeyDown={handleChatKeyPress}
+                placeholder="Message from pump.fun..."
+                className="flex-1 bg-white/5 border-white/20 text-white font-mono text-sm placeholder:text-white/30 focus:border-white/40"
+              />
+              <Button
+                onClick={handleAddChatMessage}
+                disabled={!chatMessage.trim()}
+                className="bg-blue-500/20 hover:bg-blue-500/30 text-blue-300 border border-blue-500/30"
+              >
+                <Send className="w-4 h-4" />
+              </Button>
+            </div>
+            <p className="text-xs text-white/40 font-mono">Octo will respond to this message</p>
           </div>
 
           {/* HP Input */}

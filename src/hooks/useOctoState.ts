@@ -569,6 +569,17 @@ export function useOctoState() {
     isDead,
   };
   
+  // Function to manually add chat message (from admin panel)
+  const addChatMessage = useCallback((author: string, content: string) => {
+    const newMessage: ChatMessage = {
+      id: `manual-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      author,
+      content,
+      timestamp: new Date(),
+    };
+    setChatMessages(prev => [...prev.slice(-30), newMessage]);
+  }, []);
+  
   return {
     state,
     writings,
@@ -585,5 +596,7 @@ export function useOctoState() {
     pumpfunTokenMint,
     setPumpfunToken,
     isPumpfunConnected,
+    // Manual chat message
+    addChatMessage,
   };
 }
