@@ -12,9 +12,10 @@ interface DonationWindowProps {
   walletAddress: string;
   recentDonations: Donation[];
   totalHPReceived?: number;
+  walletBalance?: number;
 }
 
-export function DonationWindow({ walletAddress, recentDonations, totalHPReceived = 0 }: DonationWindowProps) {
+export function DonationWindow({ walletAddress, recentDonations, totalHPReceived = 0, walletBalance = 0 }: DonationWindowProps) {
   const truncatedAddress = `${walletAddress.slice(0, 8)}...${walletAddress.slice(-6)}`;
   
   const copyToClipboard = () => {
@@ -60,6 +61,14 @@ export function DonationWindow({ walletAddress, recentDonations, totalHPReceived
           copy
         </span>
       </button>
+      
+      {/* Balance */}
+      <div className="flex items-center justify-between text-xs mb-2 px-1">
+        <span className="text-muted-foreground">Balance</span>
+        <span className="text-primary font-mono font-medium">
+          {walletBalance.toFixed(4)} SOL
+        </span>
+      </div>
       
       {/* Network */}
       <div className="flex items-center justify-between text-xs mb-3 px-1">

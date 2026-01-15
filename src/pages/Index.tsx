@@ -24,7 +24,8 @@ function Index() {
     totalHPReceived,
     currentResponse,
     highlightedMessageId,
-    walletAddress, 
+    walletAddress,
+    walletBalance,
     contractAddress,
     // Pump.fun integration
     pumpfunTokenMint,
@@ -93,6 +94,7 @@ function Index() {
                   walletAddress={walletAddress} 
                   recentDonations={donations}
                   totalHPReceived={totalHPReceived}
+                  walletBalance={walletBalance}
                 />
               </motion.div>
               
@@ -149,6 +151,7 @@ function Index() {
                     walletAddress={walletAddress} 
                     recentDonations={donations}
                     totalHPReceived={totalHPReceived}
+                    walletBalance={walletBalance}
                   />
                 </div>
               </motion.div>

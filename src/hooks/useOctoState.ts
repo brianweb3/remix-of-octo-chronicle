@@ -12,6 +12,7 @@ import {
   WALLET_ADDRESS
 } from '@/types/octo';
 import { getPumpfunChatService, PumpfunChatService } from '@/services/pumpfunChat';
+import { getWalletMonitorService, WalletTransaction } from '@/services/walletMonitor';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -62,6 +63,9 @@ export function useOctoState() {
     return DEFAULT_TOKEN_MINT;
   });
   const [isPumpfunConnected, setIsPumpfunConnected] = useState(false);
+  
+  // Wallet state
+  const [walletBalance, setWalletBalance] = useState<number>(0);
   
   const writingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasRespondedRef = useRef(false);
@@ -209,6 +213,65 @@ export function useOctoState() {
       localStorage.setItem(STORAGE_KEY_TOKEN_MINT, pumpfunTokenMint);
     }
   }, [pumpfunTokenMint]);
+  
+  // Wallet monitoring for real-time donations
+  useEffect(() => {
+    const walletMonitor = getWalletMonitorService();
+    
+    walletMonitor.start({
+      onBalanceChange: (balanceSol) => {
+        setWalletBalance(balanceSol);
+      },
+      onTransaction: (tx: WalletTransaction) => {
+        // Add to transactions list
+        const newTransaction: Transaction = {
+          txHash: tx.signature,
+          amountSol: tx.amountSol,
+          hpAdded: tx.hpAdded,
+          timestamp: tx.timestamp,
+        };
+        
+        setTransactions(prev => [newTransaction, ...prev.slice(0, 19)]);
+        
+        // Add HP (capped at MAX_HP)
+        if (tx.hpAdded > 0) {
+          setHP(prev => {
+            const newHP = Math.min(prev + tx.hpAdded, MAX_HP);
+            return newHP;
+          });
+          
+          // Revive if was dead
+          if (isDead && tx.hpAdded > 0) {
+            setIsDead(false);
+          }
+          
+          // Show notification
+          toast({
+            title: "💰 Donation received!",
+            description: `+${tx.amountSol.toFixed(4)} SOL → +${tx.hpAdded} HP (${tx.hpAdded} minutes added)`,
+          });
+          
+          // Save to database
+          try {
+            (supabase.from('transaction_history' as any) as any).insert({
+              tx_hash: tx.signature,
+              amount_sol: tx.amountSol.toString(),
+              hp_added: tx.hpAdded,
+            });
+          } catch (e) {
+            console.log('Could not save transaction to database');
+          }
+        }
+      },
+      onError: (error) => {
+        console.error('[WalletMonitor] Error:', error);
+      },
+    });
+    
+    return () => {
+      walletMonitor.stop();
+    };
+  }, [isDead, toast]);
   
   // HP drain: -1 HP per minute (60 seconds)
   // Server-side drain is handled by cron job calling wallet-monitor function
@@ -450,6 +513,7 @@ export function useOctoState() {
     currentResponse,
     highlightedMessageId,
     walletAddress: WALLET_ADDRESS,
+    walletBalance,
     contractAddress: WALLET_ADDRESS, // Same as wallet for now
     // Pump.fun integration
     pumpfunTokenMint,
