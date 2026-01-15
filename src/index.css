@@ -95,9 +95,9 @@
 }
 
 @layer components {
-  /* Glass panel effect */
+  /* Glass panel effect - NO rounded corners */
   .glass-panel {
-    @apply bg-card/85 backdrop-blur-md border border-border/30 rounded-lg;
+    @apply bg-card/85 backdrop-blur-md border border-border/30;
     box-shadow: var(--shadow-deep);
   }
   
@@ -126,12 +126,12 @@
     animation: twitch 6s ease-in-out infinite;
   }
   
-  /* Chat message styles */
+  /* Chat message styles - NO rounded corners */
   .chat-message {
-    @apply p-3 rounded-lg bg-secondary/50 border border-border/20;
+    @apply p-3 bg-secondary/50 border border-border/20;
   }
   
-  /* Writing card */
+  /* Writing card - NO rounded corners */
   .writing-card {
     @apply p-6 glass-panel transition-all duration-300;
   }

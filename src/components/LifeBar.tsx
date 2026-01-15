@@ -9,7 +9,11 @@ export function LifeBar({ state }: LifeBarProps) {
   const { remainingSeconds, maxSeconds, lifeState } = state;
   const percentage = Math.min(100, (remainingSeconds / maxSeconds) * 100);
   
-  // Color based on life state - gradual, not alarming
+  // XP value display (1 second = 1 XP for simplicity)
+  const xpValue = Math.floor(remainingSeconds);
+  const formattedXP = xpValue.toLocaleString();
+  
+  // Color based on life state - muted, not alarming
   const getBarColor = () => {
     switch (lifeState) {
       case 'alive':
@@ -22,19 +26,6 @@ export function LifeBar({ state }: LifeBarProps) {
         return 'bg-dead';
     }
   };
-  
-  const getGlowColor = () => {
-    switch (lifeState) {
-      case 'alive':
-        return 'shadow-[0_0_20px_hsl(185_55%_55%/0.4)]';
-      case 'starving':
-        return 'shadow-[0_0_15px_hsl(45_80%_55%/0.3)]';
-      case 'dying':
-        return 'shadow-[0_0_10px_hsl(0_60%_50%/0.2)]';
-      case 'dead':
-        return '';
-    }
-  };
 
   return (
     <motion.div 
@@ -43,10 +34,20 @@ export function LifeBar({ state }: LifeBarProps) {
       transition={{ delay: 0.5, duration: 0.8 }}
       className="w-full max-w-xs"
     >
-      {/* Life bar container */}
-      <div className="h-1.5 bg-secondary/40 rounded-full overflow-hidden backdrop-blur-sm">
+      {/* XP Label */}
+      <div className="flex items-center justify-between mb-1">
+        <span className="text-[10px] text-foreground-light/40 uppercase tracking-widest font-mono">
+          XP
+        </span>
+        <span className="text-xs text-foreground-light/60 font-mono">
+          {formattedXP}
+        </span>
+      </div>
+      
+      {/* Life bar container - sharp edges, no rounded corners */}
+      <div className="h-2 bg-secondary/60 overflow-hidden">
         <motion.div
-          className={`h-full rounded-full ${getBarColor()} ${getGlowColor()} transition-colors duration-1000`}
+          className={`h-full ${getBarColor()} transition-colors duration-1000`}
           initial={{ width: 0 }}
           animate={{ width: `${percentage}%` }}
           transition={{ duration: 0.5, ease: 'easeOut' }}

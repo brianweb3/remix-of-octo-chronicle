@@ -52,10 +52,10 @@ export function DonationWindow({ walletAddress, recentDonations }: DonationWindo
         Donation Wallet
       </div>
       
-      {/* Wallet address */}
+      {/* Wallet address - no rounded corners */}
       <button
         onClick={copyToClipboard}
-        className="w-full flex items-center justify-between p-3 rounded-lg bg-secondary/40 hover:bg-secondary/60 transition-colors group mb-3"
+        className="w-full flex items-center justify-between p-3 bg-secondary/40 hover:bg-secondary/60 transition-colors group mb-3"
       >
         <span className="text-sm font-mono text-foreground-light/80 group-hover:text-foreground-light">
           {truncatedAddress}
@@ -89,14 +89,14 @@ export function DonationWindow({ walletAddress, recentDonations }: DonationWindo
           recentDonations.map((donation) => (
             <div 
               key={donation.id}
-              className="flex items-center justify-between text-xs p-2 rounded bg-secondary/20"
+              className="flex items-center justify-between text-xs p-2 bg-secondary/20"
             >
               <div className="flex items-center gap-2">
                 <span className="text-foreground-light/80 font-mono">
                   {donation.amount} SOL
                 </span>
-                <span className="text-primary/60">
-                  {formatLifeAdded(donation.lifeAdded)}
+                <span className="text-primary/60 font-mono">
+                  +{Math.floor(donation.lifeAdded)} XP
                 </span>
               </div>
               <span className="text-muted-foreground">
