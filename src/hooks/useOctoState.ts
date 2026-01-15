@@ -54,6 +54,7 @@ export function useOctoState() {
   
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const writingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const hasRespondedRef = useRef(false);
   
   const lifeState = getLifeState(hp);
   
@@ -89,7 +90,7 @@ export function useOctoState() {
       };
       
       setChatMessages(prev => [...prev.slice(-20), newMessage]);
-    }, 8000 + Math.random() * 7000); // Random 8-15 seconds
+    }, 6000 + Math.random() * 4000); // Random 6-10 seconds
     
     return () => clearInterval(interval);
   }, [isDead]);
@@ -97,6 +98,7 @@ export function useOctoState() {
   // Speak function using ElevenLabs
   const speak = useCallback(async (text: string) => {
     try {
+      console.log('Speaking:', text);
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/octo-speak`,
         {
@@ -109,93 +111,112 @@ export function useOctoState() {
         }
       );
       
-      if (!response.ok) return;
+      if (!response.ok) {
+        console.error('Speak response not ok:', response.status);
+        return;
+      }
       
       const audioBlob = await response.blob();
       const audioUrl = URL.createObjectURL(audioBlob);
       
       if (audioRef.current) {
         audioRef.current.pause();
+        URL.revokeObjectURL(audioRef.current.src);
       }
       
       audioRef.current = new Audio(audioUrl);
-      audioRef.current.play().catch(() => {});
+      audioRef.current.volume = 0.8;
+      await audioRef.current.play();
+      console.log('Audio playing');
     } catch (error) {
       console.error('Failed to speak:', error);
     }
   }, []);
   
-  // Octo responds to chat messages using AI
-  useEffect(() => {
+  // Generate AI response and speak it
+  const generateResponse = useCallback(async (chatMessage?: string) => {
     if (isDead || isLoadingResponse) return;
     
-    // Response chance based on life state
-    const responseChance = lifeState === 'alive' ? 0.5 : lifeState === 'starving' ? 0.25 : 0.1;
+    setIsLoadingResponse(true);
+    console.log('Generating response for:', chatMessage);
     
-    const interval = setInterval(async () => {
-      if (Math.random() > responseChance || chatMessages.length === 0) return;
-      
-      setIsLoadingResponse(true);
-      
-      try {
-        // Get last chat message to respond to
-        const lastMessage = chatMessages[chatMessages.length - 1];
-        if (lastMessage?.isOctoResponse) {
-          setIsLoadingResponse(false);
-          return;
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/octo-respond`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ 
+            lifeState,
+            chatMessage: chatMessage || ''
+          }),
         }
-        
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/octo-respond`,
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-            },
-            body: JSON.stringify({ 
-              lifeState,
-              chatMessage: lastMessage?.content || ''
-            }),
-          }
-        );
-        
-        if (!response.ok) {
-          setIsLoadingResponse(false);
-          return;
-        }
-        
-        const data = await response.json();
-        const octoResponse = data.response;
-        
-        setCurrentResponse(octoResponse);
-        
-        // Speak the response
-        speak(octoResponse);
-        
-        // Add to chat
-        const newMessage: ChatMessage = {
-          id: `octo-${Date.now()}`,
-          author: 'Octo Claude',
-          content: octoResponse,
-          timestamp: new Date(),
-          isOctoResponse: true,
-        };
-        setChatMessages(prev => [...prev.slice(-20), newMessage]);
-        
-        // Clear speech bubble after display
-        const displayTime = Math.max(5000, octoResponse.length * 80);
-        setTimeout(() => setCurrentResponse(null), displayTime);
-        
-      } catch (error) {
-        console.error('Failed to get AI response:', error);
+      );
+      
+      if (!response.ok) {
+        console.error('Response not ok:', response.status);
+        setIsLoadingResponse(false);
+        return;
       }
       
-      setIsLoadingResponse(false);
-    }, 12000); // Check every 12 seconds
+      const data = await response.json();
+      const octoResponse = data.response;
+      console.log('Got AI response:', octoResponse);
+      
+      setCurrentResponse(octoResponse);
+      
+      // Add to chat
+      const newMessage: ChatMessage = {
+        id: `octo-${Date.now()}`,
+        author: 'Octo Claude',
+        content: octoResponse,
+        timestamp: new Date(),
+        isOctoResponse: true,
+      };
+      setChatMessages(prev => [...prev.slice(-20), newMessage]);
+      
+      // Speak the response
+      await speak(octoResponse);
+      
+      // Clear speech bubble after display
+      const displayTime = Math.max(6000, octoResponse.length * 100);
+      setTimeout(() => setCurrentResponse(null), displayTime);
+      
+    } catch (error) {
+      console.error('Failed to get AI response:', error);
+    }
     
-    return () => clearInterval(interval);
-  }, [isDead, lifeState, chatMessages, isLoadingResponse, speak]);
+    setIsLoadingResponse(false);
+  }, [isDead, lifeState, isLoadingResponse, speak]);
+  
+  // Octo responds to chat messages - triggered periodically
+  useEffect(() => {
+    if (isDead) return;
+    
+    // First response after 5 seconds
+    const initialTimeout = setTimeout(() => {
+      if (!hasRespondedRef.current) {
+        hasRespondedRef.current = true;
+        generateResponse('Hello, I am here');
+      }
+    }, 5000);
+    
+    // Then respond every 15-25 seconds
+    const interval = setInterval(() => {
+      const lastMessage = chatMessages.filter(m => !m.isOctoResponse).pop();
+      if (lastMessage && Math.random() < 0.7) {
+        generateResponse(lastMessage.content);
+      }
+    }, 15000 + Math.random() * 10000);
+    
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(interval);
+    };
+  }, [isDead, chatMessages, generateResponse]);
   
   // Write articles periodically (5-30 minutes)
   const scheduleNextWriting = useCallback(() => {
