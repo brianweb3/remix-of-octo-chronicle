@@ -2,16 +2,18 @@ import { motion } from 'framer-motion';
 import { OctopusScene } from '@/components/OctopusScene';
 import { ChatFeed } from '@/components/ChatFeed';
 import { WritingsSection } from '@/components/WritingsSection';
-import { WalletDisplay } from '@/components/WalletDisplay';
+import { LifeBar } from '@/components/LifeBar';
+import { DonationWindow } from '@/components/DonationWindow';
+import { ContractButton } from '@/components/ContractButton';
 import { useOctoState } from '@/hooks/useOctoState';
 
 const Index = () => {
-  const { state, writings, chatMessages, walletAddress } = useOctoState();
+  const { state, writings, chatMessages, donations, walletAddress, contractAddress } = useOctoState();
   
   return (
     <div className="min-h-screen bg-background noise-overlay">
       {/* Hero Section with 3D Octopus */}
-      <section className="relative h-screen flex flex-col">
+      <section className="relative min-h-screen flex flex-col">
         {/* Header */}
         <header className="absolute top-0 left-0 right-0 z-10 p-6 flex items-center justify-between">
           <motion.div
@@ -27,52 +29,77 @@ const Index = () => {
             </p>
           </motion.div>
           
-          <WalletDisplay address={walletAddress} />
+          <div className="flex items-center gap-3">
+            <ContractButton address={contractAddress} />
+          </div>
         </header>
         
         {/* Main content grid */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 p-4 pt-24 pb-8">
+          {/* Left side - Donation Window */}
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="hidden lg:block lg:col-span-1"
+          >
+            <DonationWindow 
+              walletAddress={walletAddress} 
+              recentDonations={donations}
+            />
+          </motion.div>
+          
           {/* 3D Octopus - Center */}
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.8, delay: 0.2 }}
-            className="lg:col-span-3 relative"
+            className="lg:col-span-2 relative flex flex-col items-center justify-center"
           >
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-full h-full max-w-3xl max-h-[600px]">
-                <OctopusScene lifeState={state.lifeState} />
-              </div>
+            {/* 3D Scene container - fixed height */}
+            <div className="w-full h-[400px] lg:h-[500px]">
+              <OctopusScene lifeState={state.lifeState} />
             </div>
             
-            {/* State indicator - subtle, bottom */}
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.5 }}
-              className="absolute bottom-4 left-1/2 -translate-x-1/2"
-            >
-              <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/40 backdrop-blur-sm">
-                <div 
-                  className={`w-2 h-2 rounded-full ${
-                    state.lifeState === 'alive' ? 'bg-alive animate-pulse-soft' :
-                    state.lifeState === 'starving' ? 'bg-starving' :
-                    state.lifeState === 'dying' ? 'bg-dying' : 'bg-dead'
-                  }`}
-                />
-                <span className="text-xs text-foreground-light/60 capitalize">
-                  {state.lifeState}
-                </span>
-              </div>
-            </motion.div>
+            {/* Life bar and state - below octopus */}
+            <div className="flex flex-col items-center gap-3 mt-4">
+              <LifeBar state={state} />
+              
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 1.5 }}
+              >
+                <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/40 backdrop-blur-sm">
+                  <div 
+                    className={`w-2 h-2 rounded-full ${
+                      state.lifeState === 'alive' ? 'bg-alive animate-pulse-soft' :
+                      state.lifeState === 'starving' ? 'bg-starving' :
+                      state.lifeState === 'dying' ? 'bg-dying' : 'bg-dead'
+                    }`}
+                  />
+                  <span className="text-xs text-foreground-light/60 capitalize">
+                    {state.lifeState}
+                  </span>
+                </div>
+              </motion.div>
+            </div>
+            
+            {/* Mobile donation window */}
+            <div className="lg:hidden mt-6 w-full max-w-sm">
+              <DonationWindow 
+                walletAddress={walletAddress} 
+                recentDonations={donations}
+              />
+            </div>
           </motion.div>
           
-          {/* Chat Feed - Side */}
+          {/* Chat Feed - Right */}
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="lg:col-span-1 h-[400px] lg:h-full"
+            className="lg:col-span-1 h-[400px] lg:h-[500px]"
           >
             <ChatFeed messages={chatMessages} />
           </motion.div>
@@ -83,7 +110,7 @@ const Index = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 2 }}
-          className="absolute bottom-8 left-1/2 -translate-x-1/2 lg:left-8 lg:translate-x-0"
+          className="absolute bottom-8 left-1/2 -translate-x-1/2"
         >
           <motion.div
             animate={{ y: [0, 8, 0] }}
