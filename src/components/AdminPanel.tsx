@@ -1,19 +1,25 @@
 import { useState, useEffect } from 'react';
-import { X, Settings, Check } from 'lucide-react';
+import { X, Settings, Check, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { supabase } from '@/integrations/supabase/client';
 
 interface AdminPanelProps {
   currentTokenMint: string;
   onTokenChange: (tokenMint: string) => void;
   isPumpfunConnected: boolean;
+  currentHp?: number;
+  onHpChange?: (hp: number) => void;
 }
 
-export function AdminPanel({ currentTokenMint, onTokenChange, isPumpfunConnected }: AdminPanelProps) {
+export function AdminPanel({ currentTokenMint, onTokenChange, isPumpfunConnected, currentHp = 100, onHpChange }: AdminPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [tokenInput, setTokenInput] = useState(currentTokenMint);
+  const [hpInput, setHpInput] = useState(currentHp.toString());
   const [saved, setSaved] = useState(false);
+  const [hpSaved, setHpSaved] = useState(false);
+  const [hpSaving, setHpSaving] = useState(false);
 
   // Secret key combo: Ctrl/Cmd + Shift + A (for Admin)
   useEffect(() => {
@@ -42,6 +48,11 @@ export function AdminPanel({ currentTokenMint, onTokenChange, isPumpfunConnected
     setTokenInput(currentTokenMint);
   }, [currentTokenMint]);
 
+  // Sync HP input when prop changes
+  useEffect(() => {
+    setHpInput(currentHp.toString());
+  }, [currentHp]);
+
   const handleSave = () => {
     if (tokenInput.trim() && tokenInput !== currentTokenMint) {
       onTokenChange(tokenInput.trim());
@@ -50,9 +61,43 @@ export function AdminPanel({ currentTokenMint, onTokenChange, isPumpfunConnected
     }
   };
 
+  const handleHpSave = async () => {
+    const newHp = parseInt(hpInput, 10);
+    if (isNaN(newHp) || newHp < 0 || newHp > 1000) {
+      return;
+    }
+    
+    setHpSaving(true);
+    try {
+      const { error } = await supabase
+        .from('agent_state')
+        .update({ hp: newHp, updated_at: new Date().toISOString() })
+        .eq('id', (await supabase.from('agent_state').select('id').limit(1).single()).data?.id);
+      
+      if (!error) {
+        onHpChange?.(newHp);
+        setHpSaved(true);
+        setTimeout(() => setHpSaved(false), 2000);
+        console.log('[AdminPanel] HP updated to:', newHp);
+      } else {
+        console.error('[AdminPanel] Failed to update HP:', error);
+      }
+    } catch (e) {
+      console.error('[AdminPanel] Error updating HP:', e);
+    } finally {
+      setHpSaving(false);
+    }
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
       handleSave();
+    }
+  };
+
+  const handleHpKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleHpSave();
     }
   };
 
@@ -85,6 +130,43 @@ export function AdminPanel({ currentTokenMint, onTokenChange, isPumpfunConnected
             <span className="text-white/60 font-mono">
               pump.fun: {isPumpfunConnected ? 'connected' : 'disconnected'}
             </span>
+          </div>
+
+          {/* HP Input */}
+          <div className="space-y-2 p-3 bg-white/5 rounded-lg border border-white/10">
+            <div className="flex items-center gap-2">
+              <Heart className="w-4 h-4 text-red-400" />
+              <Label htmlFor="hpValue" className="text-white/70 font-mono text-sm">
+                Set HP Value (0-1000)
+              </Label>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                id="hpValue"
+                type="number"
+                min="0"
+                max="1000"
+                value={hpInput}
+                onChange={(e) => setHpInput(e.target.value)}
+                onKeyDown={handleHpKeyPress}
+                placeholder="Enter HP..."
+                className="bg-white/5 border-white/20 text-white font-mono text-sm placeholder:text-white/30 focus:border-white/40"
+              />
+              <Button
+                onClick={handleHpSave}
+                disabled={hpSaving || isNaN(parseInt(hpInput, 10)) || parseInt(hpInput, 10) < 0 || parseInt(hpInput, 10) > 1000}
+                className="bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 font-mono"
+              >
+                {hpSaved ? (
+                  <Check className="w-4 h-4" />
+                ) : hpSaving ? (
+                  '...'
+                ) : (
+                  'Set'
+                )}
+              </Button>
+            </div>
+            <p className="text-xs text-white/40 font-mono">Current: {currentHp} HP</p>
           </div>
 
           {/* Token Input */}
