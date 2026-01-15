@@ -4,11 +4,10 @@ import { ChatMessage } from '@/types/octo';
 // Direct WebSocket to pump.fun is blocked by Cloudflare, so we use polling
 
 export interface PumpfunMessage {
+  id: string;
   user: string;
   message: string;
   timestamp: number;
-  signature?: string;
-  mint?: string;
 }
 
 export interface PumpfunChatConfig {
@@ -37,10 +36,10 @@ export class PumpfunChatService {
     // Initial fetch
     const gotMessages = await this.fetchMessages();
     
-    // Start polling every 5 seconds
+    // Start polling every 3 seconds
     this.pollInterval = setInterval(() => {
       this.fetchMessages();
-    }, 5000);
+    }, 3000);
     
     this.isPolling = true;
     // Only mark as connected if we got real messages
@@ -81,19 +80,19 @@ export class PumpfunChatService {
       const data = await response.json();
       const messages: PumpfunMessage[] = data.messages || [];
       
-      // Only consider it connected if we got real messages from 'live' source
-      const gotRealMessages = data.source === 'live' && messages.length > 0;
+      console.log(`[PumpfunChat] Got ${messages.length} messages, source: ${data.source}`);
       
-      if (gotRealMessages) {
+      // Mark as connected if we got any messages
+      if (messages.length > 0) {
         this.hasReceivedRealMessages = true;
         this.config.onConnectionChange(true);
       }
       
-      console.log(`[PumpfunChat] Got ${messages.length} messages from ${data.source}`);
+      // Process new messages (newest first, so reverse to show oldest first)
+      const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp);
       
-      // Process new messages
-      for (const msg of messages) {
-        const messageId = `${msg.user}-${msg.timestamp}-${msg.message.slice(0, 20)}`;
+      for (const msg of sortedMessages) {
+        const messageId = msg.id || `${msg.user}-${msg.timestamp}`;
         
         if (!this.seenMessageIds.has(messageId)) {
           this.seenMessageIds.add(messageId);
@@ -120,14 +119,19 @@ export class PumpfunChatService {
     if (!this.config) return;
     
     // Truncate wallet address for display
-    const displayUser = data.user?.slice(0, 6) + '...' + data.user?.slice(-4) || 'anon';
+    const user = data.user || 'anon';
+    const displayUser = user.length > 10 
+      ? user.slice(0, 6) + '...' + user.slice(-4) 
+      : user;
     
     const chatMessage: ChatMessage = {
-      id: `pf-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+      id: data.id || `pf-${Date.now()}-${Math.random().toString(36).slice(2)}`,
       author: displayUser,
       content: data.message || '',
       timestamp: new Date(data.timestamp || Date.now()),
     };
+    
+    console.log(`[PumpfunChat] New message from ${displayUser}: ${data.message?.slice(0, 50)}`);
     
     this.config.onMessage(chatMessage);
   }

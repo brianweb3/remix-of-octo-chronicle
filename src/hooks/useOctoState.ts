@@ -22,21 +22,8 @@ const MOCK_X_POSTS: XPost[] = [
   { id: '3', content: 'Time accumulates like sediment.', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000) },
 ];
 
-// Random chat messages for fallback when pump.fun is not connected
-const RANDOM_CHAT_AUTHORS = [
-  'degen_42', 'moon_boy', 'ser_whale', 'based_chad', 'crypto_fren',
-  'diamond_hands', 'pump_master', 'sol_maxi', 'ape_in', 'ngmi_cope'
-];
-
-const RANDOM_CHAT_MESSAGES = [
-  'gm', 'lfg 🚀', 'wagmi', 'nice project ser!', 'to the moon 🌙', 'bullish af',
-  'devs active?', 'wen pump?', 'holding strong 💎', 'let\'s go frens!',
-  'based', 'who\'s still here?', 'buy the dip ser', 'diamond hands 💎🙌',
-  'aped in', 'this is the one', 'ngmi if u sell', 'comfy hold', 'moon soon 🚀',
-];
-
-// Default pump.fun token (JULIANO)
-const DEFAULT_TOKEN_MINT = 'Bcz4bUXgaqnfwcmodQwzrGW57fXT2vffJzj2U4FHpump';
+// Default pump.fun token
+const DEFAULT_TOKEN_MINT = '74ZWQeLpfvpBGfw3dUrZpQUKuY2bhPaqhi5ZaNfNpump';
 const STORAGE_KEY_TOKEN_MINT = 'octo_pumpfun_token_mint';
 
 // Writing interval: random between 3-10 minutes (CANONICAL)
@@ -70,7 +57,6 @@ export function useOctoState() {
   const writingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasRespondedRef = useRef(false);
   const chatServiceRef = useRef<PumpfunChatService | null>(null);
-  const mockChatIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastHPRef = useRef(hp);
   const isInitialLoadRef = useRef(true); // Prevent notification on initial load
   
@@ -220,8 +206,8 @@ export function useOctoState() {
     if (hp > lastHPRef.current && !isDead) {
       const hpAdded = hp - lastHPRef.current;
       toast({
-        title: "💰 Donation received!",
-        description: `Octo Claude's life extended by +${hpAdded} minute${hpAdded > 1 ? 's' : ''}.`,
+        title: "Donation received",
+        description: `+${hpAdded} HP added`,
       });
     }
     lastHPRef.current = hp;
@@ -310,8 +296,8 @@ export function useOctoState() {
           
           // Show notification
           toast({
-            title: "💰 Donation received!",
-            description: `+${tx.amountSol.toFixed(4)} SOL → +${tx.hpAdded} HP (${tx.hpAdded} minutes added)`,
+            title: "Donation received",
+            description: `+${tx.amountSol.toFixed(4)} SOL → +${tx.hpAdded} HP`,
           });
           
           // Save to database
@@ -355,35 +341,7 @@ export function useOctoState() {
     return () => clearInterval(interval);
   }, [isDead]);
   
-  // Generate mock chat messages only when pump.fun is not connected
-  useEffect(() => {
-    if (isDead) return;
-    
-    if (isPumpfunConnected) {
-      if (mockChatIntervalRef.current) {
-        clearInterval(mockChatIntervalRef.current);
-        mockChatIntervalRef.current = null;
-      }
-      return;
-    }
-    
-    mockChatIntervalRef.current = setInterval(() => {
-      const newMessage: ChatMessage = {
-        id: Date.now().toString(),
-        author: RANDOM_CHAT_AUTHORS[Math.floor(Math.random() * RANDOM_CHAT_AUTHORS.length)],
-        content: RANDOM_CHAT_MESSAGES[Math.floor(Math.random() * RANDOM_CHAT_MESSAGES.length)],
-        timestamp: new Date(),
-      };
-      
-      setChatMessages(prev => [...prev.slice(-30), newMessage]);
-    }, 4000 + Math.random() * 4000);
-    
-    return () => {
-      if (mockChatIntervalRef.current) {
-        clearInterval(mockChatIntervalRef.current);
-      }
-    };
-  }, [isDead, isPumpfunConnected]);
+  // Mock chat disabled - only real pump.fun messages
   
   // Generate AI response
   const generateResponse = useCallback(async (chatMessage?: string, messageId?: string) => {
@@ -424,14 +382,14 @@ export function useOctoState() {
       
       const newMessage: ChatMessage = {
         id: `octo-${Date.now()}`,
-        author: '🐙 Octo',
+        author: 'Octo',
         content: octoResponse,
         timestamp: new Date(),
         isOctoResponse: true,
       };
       setChatMessages(prev => [...prev.slice(-30), newMessage]);
       
-      const displayTime = Math.max(5000, octoResponse.length * 80);
+      const displayTime = Math.max(5000, octoResponse.length * 100);
       setTimeout(() => {
         setCurrentResponse(null);
         setHighlightedMessageId(null);
@@ -445,10 +403,37 @@ export function useOctoState() {
     setIsLoadingResponse(false);
   }, [isDead, lifeState, isLoadingResponse]);
   
-  // Octo responds to chat messages
+  // Track messages we've already responded to
+  const respondedMessagesRef = useRef<Set<string>>(new Set());
+  const responseQueueRef = useRef<{ content: string; id: string }[]>([]);
+  const isProcessingQueueRef = useRef(false);
+  
+  // Process response queue one at a time
+  const processResponseQueue = useCallback(async () => {
+    if (isProcessingQueueRef.current || isDead || responseQueueRef.current.length === 0) return;
+    
+    isProcessingQueueRef.current = true;
+    
+    const next = responseQueueRef.current.shift();
+    if (next) {
+      await generateResponse(next.content, next.id);
+      // Small delay between responses to avoid spam
+      await new Promise(resolve => setTimeout(resolve, 2000));
+    }
+    
+    isProcessingQueueRef.current = false;
+    
+    // Continue processing if more in queue
+    if (responseQueueRef.current.length > 0) {
+      processResponseQueue();
+    }
+  }, [isDead, generateResponse]);
+  
+  // Octo responds to each new chat message
   useEffect(() => {
     if (isDead) return;
     
+    // Initial greeting
     const initialTimeout = setTimeout(() => {
       if (!hasRespondedRef.current) {
         hasRespondedRef.current = true;
@@ -456,23 +441,41 @@ export function useOctoState() {
       }
     }, 3000);
     
-    const interval = setInterval(() => {
-      const nonOctoMessages = chatMessages.filter(m => !m.isOctoResponse);
-      const lastFewMessages = nonOctoMessages.slice(-5);
-      
-      if (lastFewMessages.length > 0) {
-        const messageToReply = lastFewMessages[Math.floor(Math.random() * lastFewMessages.length)];
-        if (messageToReply && Math.random() < 0.8) {
-          generateResponse(messageToReply.content, messageToReply.id);
-        }
-      }
-    }, 10000 + Math.random() * 10000);
-    
     return () => {
       clearTimeout(initialTimeout);
-      clearInterval(interval);
     };
-  }, [isDead, chatMessages, generateResponse]);
+  }, [isDead, generateResponse]);
+  
+  // Counter to respond to every other message
+  const messageCounterRef = useRef(0);
+  
+  // Watch for new messages and queue responses (every other message)
+  useEffect(() => {
+    if (isDead) return;
+    
+    const nonOctoMessages = chatMessages.filter(m => !m.isOctoResponse);
+    
+    for (const msg of nonOctoMessages) {
+      if (!respondedMessagesRef.current.has(msg.id)) {
+        respondedMessagesRef.current.add(msg.id);
+        messageCounterRef.current++;
+        
+        // Only respond to every other message
+        if (messageCounterRef.current % 2 === 0) {
+          responseQueueRef.current.push({ content: msg.content, id: msg.id });
+        }
+      }
+    }
+    
+    // Keep set from growing too large
+    if (respondedMessagesRef.current.size > 100) {
+      const arr = Array.from(respondedMessagesRef.current);
+      respondedMessagesRef.current = new Set(arr.slice(-50));
+    }
+    
+    // Process queue
+    processResponseQueue();
+  }, [isDead, chatMessages, processResponseQueue]);
   
   // Write articles periodically (3-10 minutes) - CANONICAL
   const scheduleNextWriting = useCallback(() => {

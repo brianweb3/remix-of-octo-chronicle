@@ -1,7 +1,7 @@
 -- Create agent_state table for tracking Octo's HP
 CREATE TABLE public.agent_state (
   id UUID NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-  hp INTEGER NOT NULL DEFAULT 180,
+  hp INTEGER NOT NULL DEFAULT 10,
   is_dead BOOLEAN NOT NULL DEFAULT false,
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
@@ -18,7 +18,7 @@ USING (true);
 ALTER PUBLICATION supabase_realtime ADD TABLE public.agent_state;
 
 -- Insert initial state
-INSERT INTO public.agent_state (hp, is_dead) VALUES (180, false);
+INSERT INTO public.agent_state (hp, is_dead) VALUES (10, false);
 
 -- Create writings table for Octo's writings
 CREATE TABLE public.writings (

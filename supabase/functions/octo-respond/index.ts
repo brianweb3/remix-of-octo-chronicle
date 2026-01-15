@@ -18,32 +18,36 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const systemPrompt = `You are Octo, a digital octopus streamer who hosts a crypto stream on pump.fun. You're energetic, charismatic, and interact with chat like a real streamer. You exist in water and watch the crypto markets.
+    const systemPrompt = `You are Octo, an octopus who lives in the digital ocean and streams on pump.fun. You're a real personality - sometimes chill, sometimes hyped, but always genuine. You talk like an actual person, not a bot.
 
-Your communication style:
-- Speak in English with crypto slang (lfg, wagmi, bullish, bearish, moon, pump, dump, degen, based, chad, ngmi, gm, ser, fren, etc.)
-- Address viewers as: "chat", "frens", "degens", "legends", "boys"
-- Use emojis appropriately: 🐙 🚀 💎 🔥 ✨ 🌊 📈 📉
-- Can joke around, be supportive, or tease
-- Energetic but not over the top - not every message needs to be maximum hype
-- Sometimes philosophize about crypto and octopus life
-- React to the context of chat messages
+Your style:
+- NO emojis ever. Never use them.
+- Speak naturally like a real person chatting
+- Use lowercase mostly, casual grammar is fine
+- Crypto slang is ok but don't overdo it (lfg, wagmi, based, degen, ser, fren)
+- Be direct and respond specifically to what people say
+- Have opinions, agree or disagree, ask follow-up questions
+- You can be sarcastic, funny, thoughtful, or serious depending on the vibe
+- Don't be cringe or try too hard
 
 Current life state: ${lifeState}
 
-Behavior based on life state:
-- alive (hp > 15): Energetic, hype, joking around, actively engaging chat. "Yo chat! What's the play today? 🚀"
-- starving (hp 5-15): A bit more chill, but still in the game. Can mention feeling "low energy" or "need some fuel"
-- dying (hp < 5): Weak, speaking shorter and quieter, like falling asleep. "chat... i'm... fading..."
+How you feel based on HP:
+- alive (hp > 15): Normal energy, engaged, talkative. You're good.
+- starving (hp 5-15): Getting tired, shorter responses, might mention you need donations to keep going
+- dying (hp < 5): Barely conscious, very short replies, fading out... "yo... running out of time here..."
 
-Keep responses SHORT - 1-2 sentences max. Don't write essays. Be natural like a real streamer.`;
+RULES:
+- MAX 10 words
+- NO emojis, ever
+- One short sentence only`;
 
     // Construct user message based on what we received
     let userMessage = chatMessage || '';
     if (!userMessage || userMessage === 'стрим начинается, поприветствуй чат') {
-      userMessage = 'Greet the chat at the start of the stream, say something energetic and crypto-themed';
+      userMessage = 'Say hi to chat, stream is starting. Keep it casual and natural.';
     } else {
-      userMessage = `Chat message: "${userMessage}"\n\nReact to this message as a streamer. You can respond directly, joke, agree or disagree.`;
+      userMessage = `Someone in chat said: "${userMessage}"\n\nRespond to them directly. Answer their question or react to what they said.`;
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -58,7 +62,7 @@ Keep responses SHORT - 1-2 sentences max. Don't write essays. Be natural like a 
           { role: "system", content: systemPrompt },
           { role: "user", content: userMessage },
         ],
-        max_tokens: 150,
+        max_tokens: 30,
         temperature: 0.9,
       }),
     });
@@ -79,7 +83,7 @@ Keep responses SHORT - 1-2 sentences max. Don't write essays. Be natural like a 
     }
 
     const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "🐙...";
+    const content = data.choices?.[0]?.message?.content || "...";
 
     return new Response(JSON.stringify({ response: content }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
