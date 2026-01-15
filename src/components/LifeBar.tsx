@@ -48,15 +48,15 @@ export function LifeBar({ state }: LifeBarProps) {
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
   
-  // Color based on life state
+  // Color based on life state - brighter colors for visibility
   const getBarColor = () => {
     switch (lifeState) {
       case 'alive':
-        return 'bg-emerald-500';
+        return 'bg-emerald-400';
       case 'starving':
-        return 'bg-amber-500';
+        return 'bg-amber-400';
       case 'dying':
-        return 'bg-red-500';
+        return 'bg-red-400';
       case 'dead':
         return 'bg-gray-500';
     }
@@ -65,11 +65,11 @@ export function LifeBar({ state }: LifeBarProps) {
   const getTextColor = () => {
     switch (lifeState) {
       case 'alive':
-        return 'text-emerald-400';
+        return 'text-emerald-300';
       case 'starving':
-        return 'text-amber-400';
+        return 'text-amber-300';
       case 'dying':
-        return 'text-red-400';
+        return 'text-red-300';
       case 'dead':
         return 'text-gray-400';
     }
@@ -78,11 +78,11 @@ export function LifeBar({ state }: LifeBarProps) {
   const getGlowColor = () => {
     switch (lifeState) {
       case 'alive':
-        return 'shadow-emerald-500/30';
+        return 'shadow-emerald-400/40';
       case 'starving':
-        return 'shadow-amber-500/30';
+        return 'shadow-amber-400/40';
       case 'dying':
-        return 'shadow-red-500/50';
+        return 'shadow-red-400/60';
       case 'dead':
         return '';
     }
