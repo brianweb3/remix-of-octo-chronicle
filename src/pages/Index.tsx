@@ -19,13 +19,25 @@ function Index() {
     writings, 
     xPosts,
     chatMessages, 
-    donations, 
+    transactions, 
     totalHPReceived,
     currentResponse,
     highlightedMessageId,
     walletAddress, 
-    contractAddress 
+    contractAddress,
+    // Pump.fun integration
+    pumpfunTokenMint,
+    setPumpfunToken,
+    isPumpfunConnected,
   } = useOctoState();
+  
+  // Map transactions to donation format for DonationWindow
+  const donations = transactions.map(t => ({
+    id: t.txHash,
+    amount: t.amountSol,
+    timestamp: t.timestamp,
+    hpAdded: t.hpAdded,
+  }));
   
   const [activeTab, setActiveTab] = useState<TabType>('home');
   
@@ -136,7 +148,13 @@ function Index() {
                 transition={{ duration: 0.6, delay: 0.4 }}
                 className="lg:col-span-1 h-[400px] lg:h-[500px]"
               >
-                <ChatFeed messages={chatMessages} highlightedMessageId={highlightedMessageId} />
+                <ChatFeed 
+                  messages={chatMessages} 
+                  highlightedMessageId={highlightedMessageId}
+                  pumpfunTokenMint={pumpfunTokenMint}
+                  isPumpfunConnected={isPumpfunConnected}
+                  onSetPumpfunToken={setPumpfunToken}
+                />
               </motion.div>
             </div>
           </section>

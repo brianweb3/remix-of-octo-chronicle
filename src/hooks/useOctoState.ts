@@ -1,5 +1,19 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { OctoState, Writing, ChatMessage, XPost, getLifeState, donationToHP } from '@/types/octo';
+import { 
+  OctoState, 
+  Writing, 
+  ChatMessage, 
+  XPost, 
+  Transaction,
+  getLifeState, 
+  donationToHP,
+  MAX_HP,
+  INITIAL_HP,
+  WALLET_ADDRESS
+} from '@/types/octo';
+import { getPumpfunChatService, PumpfunChatService } from '@/services/pumpfunChat';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 const MOCK_X_POSTS: XPost[] = [
   { id: '1', content: 'The light changed again. No one noticed but me.', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000) },
@@ -7,62 +21,194 @@ const MOCK_X_POSTS: XPost[] = [
   { id: '3', content: 'Time accumulates like sediment.', timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000) },
 ];
 
-export interface Donation {
-  id: string;
-  amount: number;
-  timestamp: Date;
-  hpAdded: number;
-}
-
-const MOCK_DONATIONS: Donation[] = [
-  { id: '1', amount: 0.05, timestamp: new Date(Date.now() - 30 * 60 * 1000), hpAdded: 5 },
-  { id: '2', amount: 0.1, timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), hpAdded: 10 },
-  { id: '3', amount: 0.25, timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), hpAdded: 25 },
-];
-
-// Random chat messages to simulate pump.fun chat
+// Random chat messages for fallback when pump.fun is not connected
 const RANDOM_CHAT_AUTHORS = [
-  'anon_fish', 'deep_sea', 'observer_42', 'silent_wave', 'crypto_squid',
-  'moon_whale', 'degen_dolphin', 'abyss_walker', 'tide_hunter', 'reef_rider'
+  'degen_42', 'moon_boy', 'ser_whale', 'based_chad', 'crypto_fren',
+  'diamond_hands', 'pump_master', 'sol_maxi', 'ape_in', 'ngmi_cope'
 ];
 
 const RANDOM_CHAT_MESSAGES = [
-  'watching...', 'still here', 'gm', 'beautiful', '...', 'wagmi',
-  'the colors shift', 'time moves strangely here', 'presence noted',
-  'interesting', 'deep thoughts', 'vibe check', 'peaceful',
-  'how long will it last', 'the water is calm today', 'silent observer',
+  'gm', 'lfg 🚀', 'wagmi', 'nice project ser!', 'to the moon 🌙', 'bullish af',
+  'devs active?', 'wen pump?', 'holding strong 💎', 'let\'s go frens!',
+  'based', 'who\'s still here?', 'buy the dip ser', 'diamond hands 💎🙌',
+  'aped in', 'this is the one', 'ngmi if u sell', 'comfy hold', 'moon soon 🚀',
 ];
 
-const MAX_HP = 720; // 12 hours = 720 minutes = 720 HP
-const INITIAL_HP = 10; // Start with 10 minutes
-const MOCK_WALLET = '0x742d35Cc6634C0532925a3b844Bc9e7595f8AaB8';
-const MOCK_CONTRACT = '0x0000000000000000000000000000000000000000';
+// Default pump.fun token (JULIANO)
+const DEFAULT_TOKEN_MINT = 'Bcz4bUXgaqnfwcmodQwzrGW57fXT2vffJzj2U4FHpump';
+const STORAGE_KEY_TOKEN_MINT = 'octo_pumpfun_token_mint';
 
-// Writing interval: random between 5-30 minutes (in ms)
-const getWritingInterval = () => (Math.floor(Math.random() * 25) + 5) * 60 * 1000;
+// Writing interval: random between 3-10 minutes (CANONICAL)
+const getWritingInterval = () => (Math.floor(Math.random() * 7) + 3) * 60 * 1000;
 
 export function useOctoState() {
+  const { toast } = useToast();
+  
   const [hp, setHP] = useState(INITIAL_HP);
   const [isDead, setIsDead] = useState(false);
   const [writings, setWritings] = useState<Writing[]>([]);
   const [xPosts] = useState<XPost[]>(MOCK_X_POSTS);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [donations] = useState<Donation[]>(MOCK_DONATIONS);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [currentResponse, setCurrentResponse] = useState<string | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
-  const [totalHPReceived] = useState(MOCK_DONATIONS.reduce((acc, d) => acc + d.hpAdded, 0));
   const [isLoadingResponse, setIsLoadingResponse] = useState(false);
+  
+  // Pump.fun chat state
+  const [pumpfunTokenMint, setPumpfunTokenMint] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(STORAGE_KEY_TOKEN_MINT) || DEFAULT_TOKEN_MINT;
+    }
+    return DEFAULT_TOKEN_MINT;
+  });
+  const [isPumpfunConnected, setIsPumpfunConnected] = useState(false);
   
   const writingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasRespondedRef = useRef(false);
+  const chatServiceRef = useRef<PumpfunChatService | null>(null);
+  const mockChatIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const lastHPRef = useRef(hp);
   
   const lifeState = getLifeState(hp);
   
-  // HP drain: -1 HP per minute (demo: every 10 seconds)
+  // Load state from Supabase on mount
+  useEffect(() => {
+    loadStateFromDatabase();
+    loadWritingsFromDatabase();
+    loadTransactionsFromDatabase();
+  }, []);
+  
+  // Load agent state from database
+  const loadStateFromDatabase = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('agent_state')
+        .select('*')
+        .single();
+      
+      if (data && !error) {
+        setHP(data.hp);
+        setIsDead(data.is_dead);
+      }
+    } catch (e) {
+      console.log('Using local state (database not available)');
+    }
+  };
+  
+  // Load writings from database
+  const loadWritingsFromDatabase = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('writings')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50);
+      
+      if (data && !error) {
+        setWritings(data.map(w => ({
+          id: w.id,
+          title: w.title,
+          content: w.content,
+          timestamp: new Date(w.created_at),
+          lifeState: w.life_state as any,
+        })));
+      }
+    } catch (e) {
+      console.log('Could not load writings from database');
+    }
+  };
+  
+  // Load transactions from database
+  const loadTransactionsFromDatabase = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('transaction_history')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(20);
+      
+      if (data && !error) {
+        setTransactions(data.map(t => ({
+          txHash: t.tx_hash,
+          amountSol: parseFloat(t.amount_sol),
+          hpAdded: t.hp_added,
+          timestamp: new Date(t.timestamp),
+        })));
+      }
+    } catch (e) {
+      console.log('Could not load transactions from database');
+    }
+  };
+  
+  // Check for new donations and show notification
+  useEffect(() => {
+    if (hp > lastHPRef.current && !isDead) {
+      const hpAdded = hp - lastHPRef.current;
+      toast({
+        title: "Wallet funded",
+        description: `Octo Claude's life extended by +${hpAdded} minute${hpAdded > 1 ? 's' : ''}.`,
+      });
+    }
+    lastHPRef.current = hp;
+  }, [hp, isDead, toast]);
+  
+  // Subscribe to real-time updates from Supabase
+  useEffect(() => {
+    const channel = supabase
+      .channel('agent_state_changes')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'agent_state' },
+        (payload) => {
+          const newState = payload.new as { hp: number; is_dead: boolean };
+          setHP(newState.hp);
+          setIsDead(newState.is_dead);
+        }
+      )
+      .subscribe();
+    
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+  
+  // Connect to pump.fun chat
+  useEffect(() => {
+    if (!pumpfunTokenMint || isDead) return;
+    
+    const chatService = getPumpfunChatService();
+    chatServiceRef.current = chatService;
+    
+    chatService.connect({
+      tokenMint: pumpfunTokenMint,
+      onMessage: (message) => {
+        setChatMessages(prev => [...prev.slice(-30), message]);
+      },
+      onConnectionChange: (connected) => {
+        setIsPumpfunConnected(connected);
+      },
+    });
+    
+    return () => {
+      chatService.disconnect();
+      chatServiceRef.current = null;
+    };
+  }, [pumpfunTokenMint, isDead]);
+  
+  // Save token mint to localStorage
+  useEffect(() => {
+    if (pumpfunTokenMint) {
+      localStorage.setItem(STORAGE_KEY_TOKEN_MINT, pumpfunTokenMint);
+    }
+  }, [pumpfunTokenMint]);
+  
+  // HP drain: -1 HP per minute (60 seconds)
+  // Server-side drain is handled by cron job calling wallet-monitor function
+  // This is client-side simulation for UI responsiveness
   useEffect(() => {
     if (isDead) return;
     
-    const demoInterval = setInterval(() => {
+    const interval = setInterval(() => {
       setHP(prev => {
         const newHP = Math.max(0, prev - 1);
         if (newHP <= 0) {
@@ -70,18 +216,24 @@ export function useOctoState() {
         }
         return newHP;
       });
-    }, 10000); // Demo: drain every 10 seconds
+    }, 60000); // 1 minute = 60 seconds
     
-    return () => {
-      clearInterval(demoInterval);
-    };
+    return () => clearInterval(interval);
   }, [isDead]);
   
-  // Generate random chat messages
+  // Generate mock chat messages only when pump.fun is not connected
   useEffect(() => {
     if (isDead) return;
     
-    const interval = setInterval(() => {
+    if (isPumpfunConnected) {
+      if (mockChatIntervalRef.current) {
+        clearInterval(mockChatIntervalRef.current);
+        mockChatIntervalRef.current = null;
+      }
+      return;
+    }
+    
+    mockChatIntervalRef.current = setInterval(() => {
       const newMessage: ChatMessage = {
         id: Date.now().toString(),
         author: RANDOM_CHAT_AUTHORS[Math.floor(Math.random() * RANDOM_CHAT_AUTHORS.length)],
@@ -89,24 +241,25 @@ export function useOctoState() {
         timestamp: new Date(),
       };
       
-      setChatMessages(prev => [...prev.slice(-20), newMessage]);
-    }, 6000 + Math.random() * 4000); // Random 6-10 seconds
+      setChatMessages(prev => [...prev.slice(-30), newMessage]);
+    }, 4000 + Math.random() * 4000);
     
-    return () => clearInterval(interval);
-  }, [isDead]);
+    return () => {
+      if (mockChatIntervalRef.current) {
+        clearInterval(mockChatIntervalRef.current);
+      }
+    };
+  }, [isDead, isPumpfunConnected]);
   
-  // Generate AI response (voice disabled due to ElevenLabs free tier limit)
+  // Generate AI response
   const generateResponse = useCallback(async (chatMessage?: string, messageId?: string) => {
     if (isDead || isLoadingResponse) return;
     
     setIsLoadingResponse(true);
     
-    // Highlight the message being responded to
     if (messageId) {
       setHighlightedMessageId(messageId);
     }
-    
-    console.log('Generating response for:', chatMessage);
     
     try {
       const response = await fetch(
@@ -125,7 +278,6 @@ export function useOctoState() {
       );
       
       if (!response.ok) {
-        console.error('Response not ok:', response.status);
         setIsLoadingResponse(false);
         setHighlightedMessageId(null);
         return;
@@ -133,22 +285,19 @@ export function useOctoState() {
       
       const data = await response.json();
       const octoResponse = data.response;
-      console.log('Got AI response:', octoResponse);
       
       setCurrentResponse(octoResponse);
       
-      // Add to chat
       const newMessage: ChatMessage = {
         id: `octo-${Date.now()}`,
-        author: 'Octo Claude',
+        author: '🐙 Octo',
         content: octoResponse,
         timestamp: new Date(),
         isOctoResponse: true,
       };
-      setChatMessages(prev => [...prev.slice(-20), newMessage]);
+      setChatMessages(prev => [...prev.slice(-30), newMessage]);
       
-      // Clear speech bubble and highlight after display
-      const displayTime = Math.max(6000, octoResponse.length * 100);
+      const displayTime = Math.max(5000, octoResponse.length * 80);
       setTimeout(() => {
         setCurrentResponse(null);
         setHighlightedMessageId(null);
@@ -162,26 +311,28 @@ export function useOctoState() {
     setIsLoadingResponse(false);
   }, [isDead, lifeState, isLoadingResponse]);
   
-  // Octo responds to chat messages - triggered periodically
+  // Octo responds to chat messages
   useEffect(() => {
     if (isDead) return;
     
-    // First response after 5 seconds
     const initialTimeout = setTimeout(() => {
       if (!hasRespondedRef.current) {
         hasRespondedRef.current = true;
-        generateResponse('Hello, I am here', undefined);
+        generateResponse('stream starting, greet the chat', undefined);
       }
-    }, 5000);
+    }, 3000);
     
-    // Then respond every 15-25 seconds
     const interval = setInterval(() => {
       const nonOctoMessages = chatMessages.filter(m => !m.isOctoResponse);
-      const lastMessage = nonOctoMessages[nonOctoMessages.length - 1];
-      if (lastMessage && Math.random() < 0.7) {
-        generateResponse(lastMessage.content, lastMessage.id);
+      const lastFewMessages = nonOctoMessages.slice(-5);
+      
+      if (lastFewMessages.length > 0) {
+        const messageToReply = lastFewMessages[Math.floor(Math.random() * lastFewMessages.length)];
+        if (messageToReply && Math.random() < 0.8) {
+          generateResponse(messageToReply.content, messageToReply.id);
+        }
       }
-    }, 15000 + Math.random() * 10000);
+    }, 10000 + Math.random() * 10000);
     
     return () => {
       clearTimeout(initialTimeout);
@@ -189,7 +340,7 @@ export function useOctoState() {
     };
   }, [isDead, chatMessages, generateResponse]);
   
-  // Write articles periodically (5-30 minutes)
+  // Write articles periodically (3-10 minutes) - CANONICAL
   const scheduleNextWriting = useCallback(() => {
     if (isDead) return;
     
@@ -216,17 +367,28 @@ export function useOctoState() {
           const data = await response.json();
           const newWriting: Writing = {
             id: Date.now().toString(),
+            title: data.title || 'Untitled',
             content: data.writing,
             timestamp: new Date(),
             lifeState,
           };
           setWritings(prev => [newWriting, ...prev]);
+          
+          // Save to database
+          try {
+            await supabase.from('writings').insert({
+              title: newWriting.title,
+              content: newWriting.content,
+              life_state: lifeState,
+            });
+          } catch (e) {
+            console.log('Could not save writing to database');
+          }
         }
       } catch (error) {
         console.error('Failed to write:', error);
       }
       
-      // Schedule next writing
       scheduleNextWriting();
     }, interval);
   }, [isDead, lifeState]);
@@ -240,7 +402,6 @@ export function useOctoState() {
       return;
     }
     
-    // Generate initial writing after 30 seconds
     const initialTimeout = setTimeout(() => {
       scheduleNextWriting();
     }, 30000);
@@ -253,11 +414,16 @@ export function useOctoState() {
     };
   }, [isDead, scheduleNextWriting]);
   
-  const addDonation = useCallback((amountSOL: number) => {
-    if (isDead) return;
-    const hpToAdd = donationToHP(amountSOL);
-    setHP(prev => Math.min(MAX_HP, prev + hpToAdd));
-  }, [isDead]);
+  // Function to update pump.fun token mint
+  const setPumpfunToken = useCallback((tokenMint: string) => {
+    setPumpfunTokenMint(tokenMint);
+    if (chatServiceRef.current?.isConnected()) {
+      chatServiceRef.current.changeRoom(tokenMint);
+    }
+  }, []);
+  
+  // Calculate total HP received
+  const totalHPReceived = transactions.reduce((acc, t) => acc + t.hpAdded, 0);
   
   const state: OctoState = {
     lifeState,
@@ -271,12 +437,15 @@ export function useOctoState() {
     writings,
     xPosts,
     chatMessages,
-    donations,
+    transactions,
     totalHPReceived,
     currentResponse,
     highlightedMessageId,
-    walletAddress: MOCK_WALLET,
-    contractAddress: MOCK_CONTRACT,
-    addDonation,
+    walletAddress: WALLET_ADDRESS,
+    contractAddress: WALLET_ADDRESS, // Same as wallet for now
+    // Pump.fun integration
+    pumpfunTokenMint,
+    setPumpfunToken,
+    isPumpfunConnected,
   };
 }

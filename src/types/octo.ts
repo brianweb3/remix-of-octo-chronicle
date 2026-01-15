@@ -9,6 +9,7 @@ export interface OctoState {
 
 export interface Writing {
   id: string;
+  title: string;
   content: string;
   timestamp: Date;
   lifeState: LifeState;
@@ -28,24 +29,38 @@ export interface XPost {
   timestamp: Date;
 }
 
-// Life state thresholds based on HP
-// Alive: > 15 HP (happy, colorful)
-// Starving: 5-15 HP
-// Dying: 1-4 HP (color changes)
+export interface Transaction {
+  txHash: string;
+  amountSol: number;
+  hpAdded: number;
+  timestamp: Date;
+}
+
+// CANONICAL Life state thresholds based on HP
+// Alive: > 60 HP
+// Starving: 15-60 HP
+// Dying: 1-14 HP
 // Dead: 0 HP
 export function getLifeState(hp: number): LifeState {
   if (hp <= 0) return 'dead';
-  if (hp < 5) return 'dying';
-  if (hp <= 15) return 'starving';
+  if (hp <= 14) return 'dying';
+  if (hp <= 60) return 'starving';
   return 'alive';
 }
 
-// Canonical donation to HP conversion
+// CANONICAL donation to HP conversion
 // 0.01 SOL = 1 HP = 1 minute
+// Minimum effective donation: 0.01 SOL
 export function donationToHP(amountSOL: number): number {
   if (amountSOL < 0.01) return 0; // Below minimum, no HP added
-  return Math.floor(amountSOL * 100); // 0.01 SOL = 1 HP
+  return Math.floor(amountSOL / 0.01); // 0.01 SOL = 1 HP
 }
+
+// CANONICAL constants
+export const MAX_HP = 720; // 12 hours = 720 minutes
+export const INITIAL_HP = 10; // Start with 10 minutes
+export const WALLET_ADDRESS = '8ejAYL1hNeJreUxTfwUQ5QVay7dN5FCbaEiQspiciVxw';
+export const HELIUS_RPC = 'https://mainnet.helius-rpc.com/?api-key=c5040336-825d-42e6-a592-59ef6633316c';
 
 // Donation table for display
 export const DONATION_TABLE = [
