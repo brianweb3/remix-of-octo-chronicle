@@ -78,17 +78,23 @@ export function useOctoState() {
     loadTransactionsFromDatabase();
   }, []);
   
+  // Database table types (for type safety before regeneration)
+  type AgentStateRow = { id: string; hp: number; is_dead: boolean; updated_at: string };
+  type WritingRow = { id: string; title: string; content: string; life_state: string; created_at: string };
+  type TransactionRow = { id: string; tx_hash: string; amount_sol: string; hp_added: number; timestamp: string };
+
   // Load agent state from database
   const loadStateFromDatabase = async () => {
     try {
       const { data, error } = await supabase
-        .from('agent_state')
+        .from('agent_state' as any)
         .select('*')
         .single();
       
-      if (data && !error) {
-        setHP(data.hp);
-        setIsDead(data.is_dead);
+      const row = data as unknown as AgentStateRow | null;
+      if (row && !error) {
+        setHP(row.hp);
+        setIsDead(row.is_dead);
       }
     } catch (e) {
       console.log('Using local state (database not available)');
@@ -99,13 +105,14 @@ export function useOctoState() {
   const loadWritingsFromDatabase = async () => {
     try {
       const { data, error } = await supabase
-        .from('writings')
+        .from('writings' as any)
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50);
       
-      if (data && !error) {
-        setWritings(data.map(w => ({
+      const rows = data as unknown as WritingRow[] | null;
+      if (rows && !error) {
+        setWritings(rows.map(w => ({
           id: w.id,
           title: w.title,
           content: w.content,
@@ -122,13 +129,14 @@ export function useOctoState() {
   const loadTransactionsFromDatabase = async () => {
     try {
       const { data, error } = await supabase
-        .from('transaction_history')
+        .from('transaction_history' as any)
         .select('*')
         .order('timestamp', { ascending: false })
         .limit(20);
       
-      if (data && !error) {
-        setTransactions(data.map(t => ({
+      const rows = data as unknown as TransactionRow[] | null;
+      if (rows && !error) {
+        setTransactions(rows.map(t => ({
           txHash: t.tx_hash,
           amountSol: parseFloat(t.amount_sol),
           hpAdded: t.hp_added,
@@ -376,7 +384,7 @@ export function useOctoState() {
           
           // Save to database
           try {
-            await supabase.from('writings').insert({
+            await (supabase.from('writings' as any) as any).insert({
               title: newWriting.title,
               content: newWriting.content,
               life_state: lifeState,
