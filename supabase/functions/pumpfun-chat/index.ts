@@ -5,6 +5,42 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Browser-like headers
+const browserHeaders = {
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+  "Accept": "application/json",
+  "Accept-Language": "en-US,en;q=0.9",
+  "Origin": "https://pump.fun",
+  "Referer": "https://pump.fun/",
+};
+
+async function tryFetchMessages(url: string, name: string): Promise<any[]> {
+  try {
+    console.log(`[pumpfun-chat] Trying ${name}: ${url}`);
+    const response = await fetch(url, { headers: browserHeaders });
+    console.log(`[pumpfun-chat] ${name} status: ${response.status}`);
+    
+    if (response.ok) {
+      const data = await response.json();
+      
+      if (Array.isArray(data)) {
+        console.log(`[pumpfun-chat] ${name} returned ${data.length} messages (array)`);
+        return data;
+      } else if (data && typeof data === 'object') {
+        const messages = data.replies || data.messages || data.data || [];
+        console.log(`[pumpfun-chat] ${name} returned ${messages.length} messages (object)`);
+        return messages;
+      }
+    } else {
+      const text = await response.text();
+      console.log(`[pumpfun-chat] ${name} error: ${text.slice(0, 100)}`);
+    }
+  } catch (e) {
+    console.log(`[pumpfun-chat] ${name} failed: ${e}`);
+  }
+  return [];
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -23,55 +59,39 @@ serve(async (req) => {
     console.log(`[pumpfun-chat] Fetching messages for token: ${tokenMint}`);
 
     let messages: any[] = [];
-    let rawResponse: any = null;
     
-    // pump.fun client API for replies/chat
-    const apiUrl = `https://client-api-2-74b1891ee9f9.herokuapp.com/replies/${tokenMint}?limit=100&offset=0`;
+    // Try multiple API endpoints
+    const endpoints = [
+      { url: `https://frontend-api.pump.fun/replies/${tokenMint}?limit=100&offset=0`, name: "frontend-api" },
+      { url: `https://client-api-2-74b1891ee9f9.herokuapp.com/replies/${tokenMint}?limit=100&offset=0`, name: "client-api-2" },
+      { url: `https://client-api.pump.fun/replies/${tokenMint}?limit=100&offset=0`, name: "client-api" },
+    ];
     
-    console.log(`[pumpfun-chat] Fetching: ${apiUrl}`);
-    
-    const response = await fetch(apiUrl, {
-      headers: {
-        "Accept": "application/json",
-      },
-    });
-    
-    console.log(`[pumpfun-chat] Response status: ${response.status}`);
-    
-    if (response.ok) {
-      rawResponse = await response.json();
-      console.log(`[pumpfun-chat] Raw response type: ${typeof rawResponse}, isArray: ${Array.isArray(rawResponse)}`);
-      
-      if (Array.isArray(rawResponse)) {
-        messages = rawResponse;
-      } else if (rawResponse && typeof rawResponse === 'object') {
-        // Log the keys to understand the structure
-        console.log(`[pumpfun-chat] Response keys: ${Object.keys(rawResponse).join(', ')}`);
-        messages = rawResponse.replies || rawResponse.messages || rawResponse.data || [];
-      }
-      
-      console.log(`[pumpfun-chat] Got ${messages.length} raw messages`);
-      
-      // Log first message structure for debugging
+    for (const endpoint of endpoints) {
+      messages = await tryFetchMessages(endpoint.url, endpoint.name);
       if (messages.length > 0) {
-        console.log(`[pumpfun-chat] First message keys: ${Object.keys(messages[0]).join(', ')}`);
-        console.log(`[pumpfun-chat] First message sample: ${JSON.stringify(messages[0]).slice(0, 300)}`);
+        console.log(`[pumpfun-chat] Success with ${endpoint.name}`);
+        break;
       }
-    } else {
-      const errorText = await response.text();
-      console.log(`[pumpfun-chat] Error response: ${errorText.slice(0, 200)}`);
+    }
+    
+    // Log first message for debugging
+    if (messages.length > 0) {
+      console.log(`[pumpfun-chat] Sample message: ${JSON.stringify(messages[0]).slice(0, 300)}`);
     }
 
-    // Normalize message format based on pump.fun structure
-    // pump.fun messages have: id, user (wallet), text, mint, created_timestamp
+    // Normalize message format
+    // pump.fun messages typically have: id, user, text, mint, created_timestamp
     const normalizedMessages = messages.map((msg: any) => ({
       id: msg.id?.toString() || `${msg.user}-${msg.created_timestamp || Date.now()}`,
-      user: msg.user || 'anon',
-      message: msg.text || msg.message || msg.content || '',
-      timestamp: msg.created_timestamp ? msg.created_timestamp * 1000 : Date.now(),
-    })).filter((msg: any) => msg.message && msg.message.trim()); // Filter out empty messages
+      user: msg.user || msg.wallet || msg.author || 'anon',
+      message: msg.text || msg.message || msg.content || msg.body || '',
+      timestamp: msg.created_timestamp 
+        ? (msg.created_timestamp > 9999999999 ? msg.created_timestamp : msg.created_timestamp * 1000)
+        : (msg.timestamp || Date.now()),
+    })).filter((msg: any) => msg.message && msg.message.trim());
 
-    console.log(`[pumpfun-chat] Normalized: ${normalizedMessages.length} messages`);
+    console.log(`[pumpfun-chat] Final: ${normalizedMessages.length} messages`);
 
     return new Response(
       JSON.stringify({ 

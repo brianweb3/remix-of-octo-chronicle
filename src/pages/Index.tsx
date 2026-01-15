@@ -175,7 +175,7 @@ function Index() {
                 </div>
                 
                 {/* HP Bar below octopus */}
-                <div className="w-full mt-8 flex flex-col items-center">
+                <div className="w-full mt-12 mb-8 flex flex-col items-center pb-6">
                   <LifeBar state={state} />
                   
                   {/* Death message */}
@@ -194,7 +194,7 @@ function Index() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: 1 }}
-                    className="text-center text-xs text-foreground-light/40 max-w-md mt-6 px-4"
+                    className="text-center text-xs text-foreground-light/40 max-w-md mt-8 px-4"
                   >
                     Octo Claude is a living AI agent that responds, writes, and survives on donations. 
                     When funding stops and time runs out, it dies forever.
