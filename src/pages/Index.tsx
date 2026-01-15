@@ -84,17 +84,17 @@ function Index() {
                 transition={{ duration: 0.8, delay: 0.2 }}
                 className="lg:col-span-2 relative flex flex-col items-center justify-center"
               >
-                {/* HP Bar above octopus */}
-                <div className="w-full mb-4">
-                  <LifeBar state={state} />
-                </div>
-                
                 {/* Speech bubble */}
                 <SpeechBubble message={currentResponse} />
                 
                 {/* 3D Scene container */}
                 <div className="w-full h-[400px] lg:h-[450px] relative">
                   <OctopusScene lifeState={state.lifeState} hp={state.hp} isDead={state.isDead} />
+                </div>
+                
+                {/* HP Bar below octopus */}
+                <div className="w-full mt-4">
+                  <LifeBar state={state} />
                 </div>
                 
                 {/* Death message */}
