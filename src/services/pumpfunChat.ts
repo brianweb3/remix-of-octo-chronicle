@@ -106,7 +106,7 @@ export class PumpfunChatService {
         this.seenMessageIds = new Set(arr.slice(-100));
       }
       
-      return gotRealMessages;
+      return messages.length > 0;
       
     } catch (error) {
       console.error('[PumpfunChat] Fetch error:', error);
