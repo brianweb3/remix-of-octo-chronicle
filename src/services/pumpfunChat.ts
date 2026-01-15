@@ -69,7 +69,6 @@ export class PumpfunChatService {
           },
           body: JSON.stringify({
             tokenMint: this.config.tokenMint,
-            action: 'getMessages',
           }),
         }
       );
