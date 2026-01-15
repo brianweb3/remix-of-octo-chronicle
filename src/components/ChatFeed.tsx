@@ -7,11 +7,14 @@ interface ChatFeedProps {
 
 export function ChatFeed({ messages }: ChatFeedProps) {
   return (
-    <div className="glass-panel h-full flex flex-col">
-      <div className="p-4 border-b border-border/30">
+    <div className="glass-panel h-full flex flex-col overflow-hidden">
+      {/* Header with Pumpfun branding */}
+      <div className="p-4 border-b border-border/30 flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
         <h3 className="text-sm font-medium text-primary-light uppercase tracking-wider">
           Live Chat
         </h3>
+        <span className="text-xs text-primary/60 font-mono">pump.fun</span>
       </div>
       
       <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-3">
@@ -23,10 +26,10 @@ export function ChatFeed({ messages }: ChatFeedProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.3 }}
-              className="chat-message"
+              className="p-3 rounded-lg bg-secondary/40 border border-border/20"
             >
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs font-medium text-primary">
+                <span className="text-xs font-medium text-primary font-mono">
                   {message.author}
                 </span>
                 <span className="text-xs text-muted-foreground">
@@ -45,6 +48,13 @@ export function ChatFeed({ messages }: ChatFeedProps) {
             Waiting for messages...
           </div>
         )}
+      </div>
+      
+      {/* Footer */}
+      <div className="p-3 border-t border-border/20 text-center">
+        <span className="text-xs text-muted-foreground">
+          Connected to pump.fun
+        </span>
       </div>
     </div>
   );

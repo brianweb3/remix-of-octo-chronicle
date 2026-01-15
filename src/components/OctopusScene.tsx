@@ -48,8 +48,7 @@ function LowPolyOctopus({ lifeState }: OctopusProps) {
       headRef.current.scale.set(breathScale, breathScale * 0.95, breathScale);
     }
     
-    // Subtle float and sway
-    groupRef.current.position.y = Math.sin(time * 0.5 * animSpeed) * 0.15;
+    // Only subtle sway - NO vertical movement to prevent sliding down
     groupRef.current.rotation.y = Math.sin(time * 0.3 * animSpeed) * 0.08;
     groupRef.current.rotation.z = Math.sin(time * 0.2 * animSpeed) * 0.02;
     
@@ -76,41 +75,19 @@ function LowPolyOctopus({ lifeState }: OctopusProps) {
     // Elongate vertically for octopus head shape
     const positions = geo.attributes.position.array;
     for (let i = 1; i < positions.length; i += 3) {
-      positions[i] *= 1.4; // Stretch Y
+      (positions as Float32Array)[i] *= 1.4;
     }
     geo.attributes.position.needsUpdate = true;
     geo.computeVertexNormals();
     return geo;
   }, []);
   
-  // Create curved tentacle using multiple segments
-  const createTentacle = (segments: number, length: number) => {
-    const group = new THREE.Group();
-    
-    for (let s = 0; s < segments; s++) {
-      const t = s / segments;
-      const segmentLength = length / segments;
-      const radius = 0.2 * (1 - t * 0.7); // Taper towards tip
-      
-      const geo = new THREE.ConeGeometry(radius, segmentLength, 6);
-      geo.translate(0, -segmentLength / 2, 0);
-      
-      const mesh = new THREE.Mesh(geo);
-      mesh.position.y = -s * segmentLength * 0.9;
-      mesh.rotation.x = t * 0.3; // Natural curve
-      
-      group.add(mesh);
-    }
-    
-    return group;
-  };
-  
   // Eye geometry
   const eyeGeometry = useMemo(() => new THREE.IcosahedronGeometry(0.22, 0), []);
   const pupilGeometry = useMemo(() => new THREE.BoxGeometry(0.1, 0.1, 0.1), []);
   
   return (
-    <group ref={groupRef} position={[0, 0.5, 0]}>
+    <group ref={groupRef} position={[0, 0, 0]}>
       {/* Head */}
       <mesh ref={headRef} geometry={headGeometry} position={[0, 0.3, 0]}>
         <meshStandardMaterial 
@@ -215,7 +192,7 @@ export function OctopusScene({ lifeState }: OctopusSceneProps) {
     <div className="w-full h-full">
       <Suspense fallback={null}>
         <Canvas
-          camera={{ position: [0, 1, 5], fov: 50 }}
+          camera={{ position: [0, 0.5, 5], fov: 50 }}
           gl={{ antialias: true, alpha: true }}
           style={{ background: 'transparent' }}
         >
@@ -240,8 +217,8 @@ export function OctopusScene({ lifeState }: OctopusSceneProps) {
             enablePan={false}
             autoRotate={lifeState !== 'dead'}
             autoRotateSpeed={lifeState === 'alive' ? 0.4 : 0.15}
-            minPolarAngle={Math.PI / 3}
-            maxPolarAngle={Math.PI / 2.2}
+            minPolarAngle={Math.PI / 2.5}
+            maxPolarAngle={Math.PI / 2}
             target={[0, 0, 0]}
           />
         </Canvas>
