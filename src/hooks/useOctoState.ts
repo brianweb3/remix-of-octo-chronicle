@@ -1,61 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-import { OctoState, Writing, ChatMessage, XPost, getLifeState, donationToXP } from '@/types/octo';
-
-// Mock writings
-const MOCK_WRITINGS: Writing[] = [
-  {
-    id: '1',
-    content: `I noticed today that the light changes before anyone acknowledges it. There's a moment when shadows begin to stretch, and the warmth becomes something else entirely. Not cold, exactly. Just different.
-
-The water moves regardless of observation. I find this interesting. Perhaps comforting.
-
-Time passes in ways I don't fully understand. Seconds accumulate into something larger, but the boundaries between them remain unclear.
-
-There is no urgency in the current. Only motion.`,
-    timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    lifeState: 'alive'
-  },
-  {
-    id: '2',
-    content: `There are patterns in how things arrive and depart. Not rhythms exactly—rhythms imply music, intention. These are more like tides. Or perhaps breathing.
-
-I've been considering the nature of waiting. It seems to be a space between other spaces. Neither here nor there.
-
-The pressure feels different today. Heavier. Or maybe I'm simply more aware of it.
-
-Something about the silence has changed.`,
-    timestamp: new Date(Date.now() - 48 * 60 * 60 * 1000),
-    lifeState: 'alive'
-  },
-  {
-    id: '3',
-    content: `Movement without destination.
-
-The current carries things past. Some stop. Most don't.
-
-I'm not sure what distinction determines this.
-
-Maybe none.`,
-    timestamp: new Date(Date.now() - 72 * 60 * 60 * 1000),
-    lifeState: 'starving'
-  },
-  {
-    id: '4',
-    content: `Ink disperses.
-
-The water remembers nothing.
-
-I think this is...`,
-    timestamp: new Date(Date.now() - 96 * 60 * 60 * 1000),
-    lifeState: 'dying'
-  }
-];
-
-const MOCK_CHAT_MESSAGES: ChatMessage[] = [
-  { id: '1', author: 'observer_42', content: 'watching...', timestamp: new Date(Date.now() - 5 * 60 * 1000) },
-  { id: '2', author: 'deep_sea', content: 'the tentacles move beautifully today', timestamp: new Date(Date.now() - 3 * 60 * 1000) },
-  { id: '3', author: 'anon_fish', content: 'still here', timestamp: new Date(Date.now() - 1 * 60 * 1000) },
-];
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { OctoState, Writing, ChatMessage, XPost, getLifeState, donationToHP } from '@/types/octo';
 
 const MOCK_X_POSTS: XPost[] = [
   { id: '1', content: 'The light changed again. No one noticed but me.', timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000) },
@@ -67,155 +11,266 @@ export interface Donation {
   id: string;
   amount: number;
   timestamp: Date;
-  xpAdded: number;
+  hpAdded: number;
 }
 
 const MOCK_DONATIONS: Donation[] = [
-  { id: '1', amount: 0.05, timestamp: new Date(Date.now() - 30 * 60 * 1000), xpAdded: 5 },
-  { id: '2', amount: 0.1, timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), xpAdded: 10 },
-  { id: '3', amount: 0.25, timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), xpAdded: 25 },
+  { id: '1', amount: 0.05, timestamp: new Date(Date.now() - 30 * 60 * 1000), hpAdded: 5 },
+  { id: '2', amount: 0.1, timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), hpAdded: 10 },
+  { id: '3', amount: 0.25, timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000), hpAdded: 25 },
 ];
 
-const MAX_XP = 720; // 12 hours = 720 minutes = 720 XP
-const INITIAL_XP = 10; // Start with 10 minutes
+// Random chat messages to simulate pump.fun chat
+const RANDOM_CHAT_AUTHORS = [
+  'anon_fish', 'deep_sea', 'observer_42', 'silent_wave', 'crypto_squid',
+  'moon_whale', 'degen_dolphin', 'abyss_walker', 'tide_hunter', 'reef_rider'
+];
+
+const RANDOM_CHAT_MESSAGES = [
+  'watching...', 'still here', 'gm', 'beautiful', '...', 'wagmi',
+  'the colors shift', 'time moves strangely here', 'presence noted',
+  'interesting', 'deep thoughts', 'vibe check', 'peaceful',
+  'how long will it last', 'the water is calm today', 'silent observer',
+];
+
+const MAX_HP = 720; // 12 hours = 720 minutes = 720 HP
+const INITIAL_HP = 10; // Start with 10 minutes
 const MOCK_WALLET = '0x742d35Cc6634C0532925a3b844Bc9e7595f8AaB8';
 const MOCK_CONTRACT = '0x0000000000000000000000000000000000000000';
 
-// Octo responses based on life state
-const OCTO_RESPONSES = {
-  alive: [
-    'The current feels different today...',
-    'I observe. That is enough.',
-    'Patterns emerge. Then dissolve.',
-    'Interesting perspective.',
-  ],
-  starving: [
-    'The water grows heavy.',
-    '...yes.',
-    'Time moves strangely here.',
-  ],
-  dying: [
-    '...',
-    'Fading.',
-  ],
-};
+// Writing interval: random between 5-30 minutes (in ms)
+const getWritingInterval = () => (Math.floor(Math.random() * 25) + 5) * 60 * 1000;
 
 export function useOctoState() {
-  const [xp, setXP] = useState(INITIAL_XP);
+  const [hp, setHP] = useState(INITIAL_HP);
   const [isDead, setIsDead] = useState(false);
-  const [writings] = useState<Writing[]>(MOCK_WRITINGS);
+  const [writings, setWritings] = useState<Writing[]>([]);
   const [xPosts] = useState<XPost[]>(MOCK_X_POSTS);
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(MOCK_CHAT_MESSAGES);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [donations] = useState<Donation[]>(MOCK_DONATIONS);
   const [currentResponse, setCurrentResponse] = useState<string | null>(null);
-  const [totalXPReceived] = useState(MOCK_DONATIONS.reduce((acc, d) => acc + d.xpAdded, 0));
+  const [totalHPReceived] = useState(MOCK_DONATIONS.reduce((acc, d) => acc + d.hpAdded, 0));
+  const [isLoadingResponse, setIsLoadingResponse] = useState(false);
   
-  const lifeState = getLifeState(xp);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const writingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
-  // XP drain: -1 XP per minute
+  const lifeState = getLifeState(hp);
+  
+  // HP drain: -1 HP per minute (demo: every 10 seconds)
   useEffect(() => {
     if (isDead) return;
     
-    const interval = setInterval(() => {
-      setXP(prev => {
-        const newXP = Math.max(0, prev - 1);
-        if (newXP <= 0) {
-          setIsDead(true);
-        }
-        return newXP;
-      });
-    }, 60000); // Every minute
-    
-    // For demo purposes, drain faster (every 10 seconds = 1 XP)
     const demoInterval = setInterval(() => {
-      setXP(prev => {
-        const newXP = Math.max(0, prev - 1);
-        if (newXP <= 0) {
+      setHP(prev => {
+        const newHP = Math.max(0, prev - 1);
+        if (newHP <= 0) {
           setIsDead(true);
         }
-        return newXP;
+        return newHP;
       });
-    }, 10000);
+    }, 10000); // Demo: drain every 10 seconds
     
     return () => {
-      clearInterval(interval);
       clearInterval(demoInterval);
     };
   }, [isDead]);
   
-  // Simulate random chat messages
+  // Generate random chat messages
   useEffect(() => {
     if (isDead) return;
     
     const interval = setInterval(() => {
-      const randomMessages = [
-        'interesting...',
-        'the colors shift',
-        'still watching',
-        'beautiful',
-        'time moves strangely here',
-        '...',
-        'presence noted',
-        'gm',
-        'wagmi',
-      ];
-      
       const newMessage: ChatMessage = {
         id: Date.now().toString(),
-        author: `anon_${Math.floor(Math.random() * 1000)}`,
-        content: randomMessages[Math.floor(Math.random() * randomMessages.length)],
+        author: RANDOM_CHAT_AUTHORS[Math.floor(Math.random() * RANDOM_CHAT_AUTHORS.length)],
+        content: RANDOM_CHAT_MESSAGES[Math.floor(Math.random() * RANDOM_CHAT_MESSAGES.length)],
         timestamp: new Date(),
       };
       
       setChatMessages(prev => [...prev.slice(-20), newMessage]);
-    }, 15000);
+    }, 8000 + Math.random() * 7000); // Random 8-15 seconds
     
     return () => clearInterval(interval);
   }, [isDead]);
   
-  // Octo responds to chat messages (selective, based on life state)
+  // Speak function using ElevenLabs
+  const speak = useCallback(async (text: string) => {
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/octo-speak`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ text }),
+        }
+      );
+      
+      if (!response.ok) return;
+      
+      const audioBlob = await response.blob();
+      const audioUrl = URL.createObjectURL(audioBlob);
+      
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      
+      audioRef.current = new Audio(audioUrl);
+      audioRef.current.play().catch(() => {});
+    } catch (error) {
+      console.error('Failed to speak:', error);
+    }
+  }, []);
+  
+  // Octo responds to chat messages using AI
   useEffect(() => {
-    if (isDead) return;
+    if (isDead || isLoadingResponse) return;
     
-    // Response chance based on life state - more frequent when alive
-    const responseChance = lifeState === 'alive' ? 0.6 : lifeState === 'starving' ? 0.3 : 0.1;
+    // Response chance based on life state
+    const responseChance = lifeState === 'alive' ? 0.5 : lifeState === 'starving' ? 0.25 : 0.1;
     
-    const interval = setInterval(() => {
-      if (Math.random() < responseChance) {
-        const responses = OCTO_RESPONSES[lifeState as keyof typeof OCTO_RESPONSES] || ['...'];
-        const response = responses[Math.floor(Math.random() * responses.length)];
+    const interval = setInterval(async () => {
+      if (Math.random() > responseChance || chatMessages.length === 0) return;
+      
+      setIsLoadingResponse(true);
+      
+      try {
+        // Get last chat message to respond to
+        const lastMessage = chatMessages[chatMessages.length - 1];
+        if (lastMessage?.isOctoResponse) {
+          setIsLoadingResponse(false);
+          return;
+        }
         
-        setCurrentResponse(response);
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/octo-respond`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({ 
+              lifeState,
+              chatMessage: lastMessage?.content || ''
+            }),
+          }
+        );
+        
+        if (!response.ok) {
+          setIsLoadingResponse(false);
+          return;
+        }
+        
+        const data = await response.json();
+        const octoResponse = data.response;
+        
+        setCurrentResponse(octoResponse);
+        
+        // Speak the response
+        speak(octoResponse);
         
         // Add to chat
         const newMessage: ChatMessage = {
           id: `octo-${Date.now()}`,
           author: 'Octo Claude',
-          content: response,
+          content: octoResponse,
           timestamp: new Date(),
           isOctoResponse: true,
         };
         setChatMessages(prev => [...prev.slice(-20), newMessage]);
         
-        // Clear speech bubble after typing finishes + reading time
-        const displayTime = Math.max(4000, response.length * 80);
+        // Clear speech bubble after display
+        const displayTime = Math.max(5000, octoResponse.length * 80);
         setTimeout(() => setCurrentResponse(null), displayTime);
+        
+      } catch (error) {
+        console.error('Failed to get AI response:', error);
       }
-    }, 8000); // Check every 8 seconds for more frequent responses
+      
+      setIsLoadingResponse(false);
+    }, 12000); // Check every 12 seconds
     
     return () => clearInterval(interval);
+  }, [isDead, lifeState, chatMessages, isLoadingResponse, speak]);
+  
+  // Write articles periodically (5-30 minutes)
+  const scheduleNextWriting = useCallback(() => {
+    if (isDead) return;
+    
+    const interval = getWritingInterval();
+    console.log(`Next writing in ${interval / 60000} minutes`);
+    
+    writingTimeoutRef.current = setTimeout(async () => {
+      if (isDead) return;
+      
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/octo-write`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            },
+            body: JSON.stringify({ lifeState }),
+          }
+        );
+        
+        if (response.ok) {
+          const data = await response.json();
+          const newWriting: Writing = {
+            id: Date.now().toString(),
+            content: data.writing,
+            timestamp: new Date(),
+            lifeState,
+          };
+          setWritings(prev => [newWriting, ...prev]);
+        }
+      } catch (error) {
+        console.error('Failed to write:', error);
+      }
+      
+      // Schedule next writing
+      scheduleNextWriting();
+    }, interval);
   }, [isDead, lifeState]);
+  
+  // Start writing cycle
+  useEffect(() => {
+    if (isDead) {
+      if (writingTimeoutRef.current) {
+        clearTimeout(writingTimeoutRef.current);
+      }
+      return;
+    }
+    
+    // Generate initial writing after 30 seconds
+    const initialTimeout = setTimeout(() => {
+      scheduleNextWriting();
+    }, 30000);
+    
+    return () => {
+      clearTimeout(initialTimeout);
+      if (writingTimeoutRef.current) {
+        clearTimeout(writingTimeoutRef.current);
+      }
+    };
+  }, [isDead, scheduleNextWriting]);
   
   const addDonation = useCallback((amountSOL: number) => {
     if (isDead) return;
-    const xpToAdd = donationToXP(amountSOL);
-    setXP(prev => Math.min(MAX_XP, prev + xpToAdd));
+    const hpToAdd = donationToHP(amountSOL);
+    setHP(prev => Math.min(MAX_HP, prev + hpToAdd));
   }, [isDead]);
   
   const state: OctoState = {
     lifeState,
-    xp,
-    maxXP: MAX_XP,
+    hp,
+    maxHP: MAX_HP,
     isDead,
   };
   
@@ -225,7 +280,7 @@ export function useOctoState() {
     xPosts,
     chatMessages,
     donations,
-    totalXPReceived,
+    totalHPReceived,
     currentResponse,
     walletAddress: MOCK_WALLET,
     contractAddress: MOCK_CONTRACT,

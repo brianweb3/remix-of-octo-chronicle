@@ -5,16 +5,16 @@ interface Donation {
   id: string;
   amount: number;
   timestamp: Date;
-  xpAdded: number;
+  hpAdded: number;
 }
 
 interface DonationWindowProps {
   walletAddress: string;
   recentDonations: Donation[];
-  totalXPReceived?: number;
+  totalHPReceived?: number;
 }
 
-export function DonationWindow({ walletAddress, recentDonations, totalXPReceived = 0 }: DonationWindowProps) {
+export function DonationWindow({ walletAddress, recentDonations, totalHPReceived = 0 }: DonationWindowProps) {
   const truncatedAddress = `${walletAddress.slice(0, 8)}...${walletAddress.slice(-6)}`;
   
   const copyToClipboard = () => {
@@ -75,9 +75,9 @@ export function DonationWindow({ walletAddress, recentDonations, totalXPReceived
       {/* Divider */}
       <div className="h-px bg-border/30 mb-4" />
       
-      {/* Donation → XP Table */}
+      {/* Donation → HP Table */}
       <div className="text-xs text-muted-foreground mb-2 uppercase tracking-wide">
-        Donation → XP
+        Donation → HP
       </div>
       
       <div className="mb-4 text-xs">
@@ -85,7 +85,7 @@ export function DonationWindow({ walletAddress, recentDonations, totalXPReceived
           <thead>
             <tr className="text-muted-foreground/70">
               <th className="text-left py-1 font-normal">SOL</th>
-              <th className="text-center py-1 font-normal">XP</th>
+              <th className="text-center py-1 font-normal">HP</th>
               <th className="text-right py-1 font-normal">Time</th>
             </tr>
           </thead>
@@ -93,7 +93,7 @@ export function DonationWindow({ walletAddress, recentDonations, totalXPReceived
             {DONATION_TABLE.map((row) => (
               <tr key={row.sol} className="border-t border-border/10">
                 <td className="text-left py-1.5 font-mono">{row.sol}</td>
-                <td className="text-center py-1.5 font-mono text-primary/70">+{row.xp}</td>
+                <td className="text-center py-1.5 font-mono text-primary/70">+{row.hp}</td>
                 <td className="text-right py-1.5">{row.time}</td>
               </tr>
             ))}
@@ -121,7 +121,7 @@ export function DonationWindow({ walletAddress, recentDonations, totalXPReceived
                   {donation.amount} SOL
                 </span>
                 <span className="text-primary/60 font-mono">
-                  +{donation.xpAdded} XP
+                  +{donation.hpAdded} HP
                 </span>
               </div>
               <span className="text-muted-foreground">
@@ -136,10 +136,10 @@ export function DonationWindow({ walletAddress, recentDonations, totalXPReceived
         )}
       </div>
       
-      {/* Total XP received */}
+      {/* Total HP received */}
       <div className="flex items-center justify-between text-xs px-1 pt-2 border-t border-border/20">
-        <span className="text-muted-foreground">Total XP received</span>
-        <span className="text-foreground-light/70 font-mono">{totalXPReceived.toLocaleString()}</span>
+        <span className="text-muted-foreground">Total HP received</span>
+        <span className="text-foreground-light/70 font-mono">{totalHPReceived.toLocaleString()}</span>
       </div>
     </motion.div>
   );
