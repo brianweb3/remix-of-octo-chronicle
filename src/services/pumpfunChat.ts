@@ -143,9 +143,16 @@ export class PumpfunChatService {
     }
     
     this.isPolling = false;
-    this.config?.onConnectionChange(false);
+    
+    // Save callback reference before nulling config
+    const onConnectionChange = this.config?.onConnectionChange;
     this.config = null;
     this.seenMessageIds.clear();
+    
+    // Call after nulling to avoid race conditions
+    if (onConnectionChange) {
+      onConnectionChange(false);
+    }
     
     console.log('[PumpfunChat] Disconnected');
   }
@@ -156,8 +163,10 @@ export class PumpfunChatService {
   
   changeRoom(newTokenMint: string) {
     if (this.config) {
+      // Save config before disconnect nulls it
+      const savedConfig = { ...this.config };
       this.disconnect();
-      this.connect({ ...this.config, tokenMint: newTokenMint });
+      this.connect({ ...savedConfig, tokenMint: newTokenMint });
     }
   }
 }
