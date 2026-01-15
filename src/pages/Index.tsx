@@ -166,9 +166,6 @@ function Index() {
                 <ChatFeed 
                   messages={chatMessages} 
                   highlightedMessageId={highlightedMessageId}
-                  pumpfunTokenMint={pumpfunTokenMint}
-                  isPumpfunConnected={isPumpfunConnected}
-                  onSetPumpfunToken={setPumpfunToken}
                 />
               </motion.div>
             </div>

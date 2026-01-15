@@ -83,25 +83,34 @@ export class WalletMonitorService {
       const data = await response.json();
       const signatures = data.result || [];
       
+      console.log('[WalletMonitor] Found', signatures.length, 'signatures, last known:', this.lastSignature?.slice(0, 10));
+      
       if (signatures.length > 0) {
         // Check for new transactions
         const latestSig = signatures[0].signature;
         
-        if (this.lastSignature && latestSig !== this.lastSignature) {
+        if (this.lastSignature === null) {
+          // First run - just store the latest signature, don't process old ones
+          console.log('[WalletMonitor] Initial load, setting last sig:', latestSig.slice(0, 10));
+          this.lastSignature = latestSig;
+        } else if (latestSig !== this.lastSignature) {
           // New transaction detected, fetch details
+          console.log('[WalletMonitor] NEW TRANSACTION DETECTED!');
           const newSigs = [];
           for (const sig of signatures) {
             if (sig.signature === this.lastSignature) break;
             newSigs.push(sig.signature);
           }
           
+          console.log('[WalletMonitor] Processing', newSigs.length, 'new transactions');
+          
           // Process new transactions
           for (const sig of newSigs.reverse()) {
             await this.processTransaction(sig);
           }
+          
+          this.lastSignature = latestSig;
         }
-        
-        this.lastSignature = latestSig;
       }
     } catch (e) {
       console.error('[WalletMonitor] Failed to fetch transactions:', e);
@@ -110,6 +119,8 @@ export class WalletMonitorService {
 
   private async processTransaction(signature: string) {
     try {
+      console.log('[WalletMonitor] Processing tx:', signature.slice(0, 20));
+      
       const response = await fetch(HELIUS_RPC, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -124,12 +135,17 @@ export class WalletMonitorService {
       const data = await response.json();
       const tx = data.result;
       
-      if (!tx) return;
+      if (!tx) {
+        console.log('[WalletMonitor] No tx data for:', signature.slice(0, 20));
+        return;
+      }
 
       // Find SOL transfer to our wallet
       const preBalances = tx.meta?.preBalances || [];
       const postBalances = tx.meta?.postBalances || [];
       const accountKeys = tx.transaction?.message?.accountKeys || [];
+      
+      console.log('[WalletMonitor] TX has', accountKeys.length, 'accounts');
       
       // Find our wallet's index
       let walletIndex = -1;
@@ -141,12 +157,17 @@ export class WalletMonitorService {
         }
       }
       
-      if (walletIndex === -1) return;
+      if (walletIndex === -1) {
+        console.log('[WalletMonitor] Our wallet not found in tx');
+        return;
+      }
       
       // Calculate received amount
       const preBalance = preBalances[walletIndex] || 0;
       const postBalance = postBalances[walletIndex] || 0;
       const diffLamports = postBalance - preBalance;
+      
+      console.log('[WalletMonitor] Balance diff:', diffLamports, 'lamports (', diffLamports / 1e9, 'SOL)');
       
       if (diffLamports > 0) {
         const amountSol = diffLamports / 1e9;
@@ -170,11 +191,13 @@ export class WalletMonitorService {
           timestamp: new Date((tx.blockTime || Date.now() / 1000) * 1000),
         };
         
-        console.log('[WalletMonitor] New donation:', amountSol, 'SOL, +', hpAdded, 'HP');
+        console.log('[WalletMonitor] 💰 NEW DONATION:', amountSol, 'SOL, +', hpAdded, 'HP from', from.slice(0, 10));
         this.config?.onTransaction(transaction);
         
         // Update balance
         await this.fetchBalance();
+      } else {
+        console.log('[WalletMonitor] Not an incoming transfer (diff <= 0)');
       }
     } catch (e) {
       console.error('[WalletMonitor] Failed to process transaction:', e);
@@ -251,11 +274,12 @@ export class WalletMonitorService {
   }
 
   private startPolling() {
-    // Poll every 15 seconds as backup
+    // Poll every 5 seconds for faster detection
     this.pollInterval = setInterval(async () => {
+      console.log('[WalletMonitor] Polling...');
       await this.fetchBalance();
       await this.fetchRecentTransactions();
-    }, 15000);
+    }, 5000);
     
     // Initial fetch
     this.fetchRecentTransactions();
