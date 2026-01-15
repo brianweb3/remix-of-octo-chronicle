@@ -55,6 +55,7 @@ export function useOctoState() {
   const [walletBalance, setWalletBalance] = useState<number>(0);
   
   const writingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const monologueIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hasRespondedRef = useRef(false);
   const chatServiceRef = useRef<PumpfunChatService | null>(null);
   const lastHPRef = useRef(hp);
@@ -550,6 +551,70 @@ export function useOctoState() {
       }
     };
   }, [isDead, scheduleNextWriting]);
+  
+  // Periodic monologue - every 60 seconds say something about itself
+  const generateMonologue = useCallback(async () => {
+    if (isDead) return;
+    
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/octo-monologue`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({ lifeState, hp }),
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.thought) {
+          setCurrentResponse(data.thought);
+          
+          // Add to chat as well
+          const newMessage: ChatMessage = {
+            id: `monologue-${Date.now()}`,
+            author: 'Octo',
+            content: data.thought,
+            timestamp: new Date(),
+            isOctoResponse: true,
+          };
+          setChatMessages(prev => [...prev.slice(-30), newMessage]);
+          
+          // Clear after display
+          setTimeout(() => {
+            setCurrentResponse(null);
+          }, 10000);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to generate monologue:', error);
+    }
+  }, [isDead, lifeState, hp]);
+  
+  // Start monologue cycle (every 60 seconds)
+  useEffect(() => {
+    if (isDead) {
+      if (monologueIntervalRef.current) {
+        clearInterval(monologueIntervalRef.current);
+      }
+      return;
+    }
+    
+    // First monologue after 60 seconds
+    monologueIntervalRef.current = setInterval(() => {
+      generateMonologue();
+    }, 60000); // 60 seconds
+    
+    return () => {
+      if (monologueIntervalRef.current) {
+        clearInterval(monologueIntervalRef.current);
+      }
+    };
+  }, [isDead, generateMonologue]);
   
   // Function to update pump.fun token mint
   const setPumpfunToken = useCallback((tokenMint: string) => {
