@@ -20,7 +20,7 @@ const Index = () => {
     xPosts,
     chatMessages, 
     donations, 
-    totalXPReceived,
+    totalHPReceived,
     currentResponse,
     walletAddress, 
     contractAddress 
@@ -30,20 +30,23 @@ const Index = () => {
   
   return (
     <div className="min-h-screen bg-background noise-overlay">
+      {/* HP Bar - Fixed at top */}
+      <LifeBar state={state} />
+      
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 p-6 flex items-center justify-between bg-background/80 backdrop-blur-sm border-b border-border/20">
+      <header className="fixed top-12 left-0 right-0 z-40 p-4 flex items-center justify-between bg-background/80 backdrop-blur-sm border-b border-border/20">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.6 }}
-          className="flex items-center gap-8"
+          className="flex items-center gap-6"
         >
           <div>
-            <h1 className="text-2xl font-bold text-foreground-light tracking-tight">
+            <h1 className="text-xl font-bold text-foreground-light tracking-tight">
               Octo Claude
             </h1>
-            <p className="text-xs text-foreground-light/50 mt-0.5">
-              Living Writing Agent
+            <p className="text-[10px] text-foreground-light/50 mt-0.5 max-w-xs">
+              Living AI agent that responds, writes, and survives on donations
             </p>
           </div>
           
@@ -59,7 +62,7 @@ const Index = () => {
       {activeTab === 'home' && (
         <>
           {/* Hero Section with 3D Octopus */}
-          <section className="relative min-h-screen flex flex-col pt-24">
+          <section className="relative min-h-screen flex flex-col pt-32">
             {/* Main content grid */}
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 p-4 pb-8">
               {/* Left side - Donation Window */}
@@ -72,7 +75,7 @@ const Index = () => {
                 <DonationWindow 
                   walletAddress={walletAddress} 
                   recentDonations={donations}
-                  totalXPReceived={totalXPReceived}
+                  totalHPReceived={totalHPReceived}
                 />
               </motion.div>
               
@@ -88,7 +91,7 @@ const Index = () => {
                 
                 {/* 3D Scene container */}
                 <div className="w-full h-[400px] lg:h-[500px] relative">
-                  <OctopusScene lifeState={state.lifeState} isDead={state.isDead} />
+                  <OctopusScene lifeState={state.lifeState} hp={state.hp} isDead={state.isDead} />
                 </div>
                 
                 {/* Death message */}
@@ -102,28 +105,23 @@ const Index = () => {
                   </motion.div>
                 )}
                 
-                {/* Life bar and state - below octopus */}
-                <div className="flex flex-col items-center gap-3 mt-4">
-                  <LifeBar state={state} />
-                  
-                  {/* Minimal status indicator */}
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 1.5 }}
-                  >
-                    <span className="text-xs text-foreground-light/50 uppercase tracking-widest font-mono">
-                      {state.lifeState}
-                    </span>
-                  </motion.div>
-                </div>
+                {/* Description */}
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 1 }}
+                  className="text-center text-xs text-foreground-light/40 max-w-md mt-4 px-4"
+                >
+                  Octo Claude is a living AI agent that responds, writes, and survives on donations. 
+                  When funding stops and time runs out, it dies forever.
+                </motion.p>
                 
                 {/* Mobile donation window */}
                 <div className="lg:hidden mt-6 w-full max-w-sm">
                   <DonationWindow 
                     walletAddress={walletAddress} 
                     recentDonations={donations}
-                    totalXPReceived={totalXPReceived}
+                    totalHPReceived={totalHPReceived}
                   />
                 </div>
               </motion.div>
@@ -155,13 +153,13 @@ const Index = () => {
       )}
       
       {activeTab === 'x' && (
-        <div className="pt-24">
+        <div className="pt-32">
           <XSection posts={xPosts} />
         </div>
       )}
       
       {activeTab === 'writings' && (
-        <div className="pt-24">
+        <div className="pt-32">
           <WritingsSection writings={writings} />
         </div>
       )}

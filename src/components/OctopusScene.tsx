@@ -6,36 +6,40 @@ import { LifeState } from '@/types/octo';
 
 interface OctopusProps {
   lifeState: LifeState;
+  hp: number;
 }
 
-function LowPolyOctopus({ lifeState }: OctopusProps) {
+function LowPolyOctopus({ lifeState, hp }: OctopusProps) {
   const groupRef = useRef<THREE.Group>(null);
   const headRef = useRef<THREE.Mesh>(null);
   const tentacleGroupRefs = useRef<THREE.Group[]>([]);
   
-  // Color based on life state
+  // Color based on life state and HP
+  // Less than 5 HP = dying (darker, desaturated)
+  // More than 15 HP = alive (brighter, more vibrant)
   const colors = useMemo(() => {
-    switch (lifeState) {
-      case 'alive':
-        return { main: '#4ECDC4', light: '#A8E6CF', dark: '#2C7873', accent: '#E8A87C' };
-      case 'starving':
-        return { main: '#7FCDCD', light: '#B8E4E4', dark: '#4A9999', accent: '#D4A574' };
-      case 'dying':
-        return { main: '#9EBEBE', light: '#C8D8D8', dark: '#6A8888', accent: '#C09868' };
-      case 'dead':
-        return { main: '#888888', light: '#AAAAAA', dark: '#555555', accent: '#999999' };
+    if (lifeState === 'dead') {
+      return { main: '#555555', light: '#777777', dark: '#333333', accent: '#666666' };
     }
-  }, [lifeState]);
+    if (hp < 5) {
+      // Dying - dark, desaturated purple/gray
+      return { main: '#6B5B7A', light: '#8A7B9A', dark: '#4A3B5A', accent: '#7A6B6A' };
+    }
+    if (hp > 15) {
+      // Alive and happy - vibrant teal/cyan
+      return { main: '#00D4AA', light: '#66FFDD', dark: '#00A080', accent: '#FFB347' };
+    }
+    // Starving - muted colors
+    return { main: '#7FCDCD', light: '#B8E4E4', dark: '#4A9999', accent: '#D4A574' };
+  }, [lifeState, hp]);
   
   // Animation speed based on life state
   const animSpeed = useMemo(() => {
-    switch (lifeState) {
-      case 'alive': return 1;
-      case 'starving': return 0.5;
-      case 'dying': return 0.15;
-      case 'dead': return 0;
-    }
-  }, [lifeState]);
+    if (lifeState === 'dead') return 0;
+    if (hp > 15) return 1.2; // More lively when happy
+    if (hp < 5) return 0.15; // Very slow when dying
+    return 0.5;
+  }, [lifeState, hp]);
   
   useFrame((state) => {
     if (!groupRef.current || animSpeed === 0) return;
@@ -185,12 +189,15 @@ function LowPolyOctopus({ lifeState }: OctopusProps) {
 
 interface OctopusSceneProps {
   lifeState: LifeState;
+  hp: number;
   isDead?: boolean;
 }
 
-export function OctopusScene({ lifeState, isDead = false }: OctopusSceneProps) {
+export function OctopusScene({ lifeState, hp, isDead = false }: OctopusSceneProps) {
   // When dead, force lifeState to 'dead' for animations
   const effectiveLifeState = isDead ? 'dead' : lifeState;
+  const effectiveHP = isDead ? 0 : hp;
+  
   return (
     <div className="w-full h-full">
       <Suspense fallback={null}>
@@ -213,7 +220,7 @@ export function OctopusScene({ lifeState, isDead = false }: OctopusSceneProps) {
           />
           <hemisphereLight args={['#4ECDC4', '#FF6B35', 0.3]} />
           
-          <LowPolyOctopus lifeState={effectiveLifeState} />
+          <LowPolyOctopus lifeState={effectiveLifeState} hp={effectiveHP} />
           
           <OrbitControls 
             enableZoom={false}
