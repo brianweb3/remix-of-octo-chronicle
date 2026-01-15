@@ -30,11 +30,8 @@ const Index = () => {
   
   return (
     <div className="min-h-screen bg-background noise-overlay">
-      {/* HP Bar - Fixed at top */}
-      <LifeBar state={state} />
-      
       {/* Header */}
-      <header className="fixed top-12 left-0 right-0 z-40 p-4 flex items-center justify-between bg-background/80 backdrop-blur-sm border-b border-border/20">
+      <header className="fixed top-0 left-0 right-0 z-50 p-4 flex items-center justify-between bg-background/80 backdrop-blur-sm border-b border-border/20">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
@@ -62,7 +59,7 @@ const Index = () => {
       {activeTab === 'home' && (
         <>
           {/* Hero Section with 3D Octopus */}
-          <section className="relative min-h-screen flex flex-col pt-32">
+          <section className="relative min-h-screen flex flex-col pt-24">
             {/* Main content grid */}
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-4 p-4 pb-8">
               {/* Left side - Donation Window */}
@@ -86,11 +83,16 @@ const Index = () => {
                 transition={{ duration: 0.8, delay: 0.2 }}
                 className="lg:col-span-2 relative flex flex-col items-center justify-center"
               >
+                {/* HP Bar above octopus */}
+                <div className="w-full mb-4">
+                  <LifeBar state={state} />
+                </div>
+                
                 {/* Speech bubble */}
                 <SpeechBubble message={currentResponse} />
                 
                 {/* 3D Scene container */}
-                <div className="w-full h-[400px] lg:h-[500px] relative">
+                <div className="w-full h-[400px] lg:h-[450px] relative">
                   <OctopusScene lifeState={state.lifeState} hp={state.hp} isDead={state.isDead} />
                 </div>
                 
@@ -153,13 +155,13 @@ const Index = () => {
       )}
       
       {activeTab === 'x' && (
-        <div className="pt-32">
+        <div className="pt-24">
           <XSection posts={xPosts} />
         </div>
       )}
       
       {activeTab === 'writings' && (
-        <div className="pt-32">
+        <div className="pt-24">
           <WritingsSection writings={writings} />
         </div>
       )}

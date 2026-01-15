@@ -42,37 +42,35 @@ export function LifeBar({ state }: LifeBarProps) {
 
   return (
     <motion.div 
-      initial={{ opacity: 0, y: -20 }}
+      initial={{ opacity: 0, y: -10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="fixed top-0 left-0 right-0 z-[100] bg-background/95 backdrop-blur-sm border-b border-border/40"
+      className="w-full max-w-md mx-auto"
     >
-      <div className="max-w-screen-xl mx-auto px-4 py-2">
-        {/* HP bar container */}
-        <div className="h-3 bg-secondary/80 overflow-hidden mb-1">
-          <motion.div
-            className={`h-full ${getBarColor()} transition-colors duration-500`}
-            initial={{ width: 0 }}
-            animate={{ width: isDead ? 0 : `${percentage}%` }}
-            transition={{ duration: 0.5, ease: 'easeOut' }}
-          />
-        </div>
-        
-        {/* HP info */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <span className={`text-sm font-bold ${getTextColor()} font-mono`}>
-              HP: {formattedHP}
-            </span>
-            <span className="text-xs text-foreground-light/60">
-              {hp} {minutesText} remaining
-            </span>
-          </div>
-          
-          <span className={`text-xs uppercase tracking-widest font-mono ${getTextColor()}`}>
-            {lifeState}
+      {/* HP info header */}
+      <div className="flex items-center justify-between mb-1">
+        <div className="flex items-center gap-3">
+          <span className={`text-sm font-bold ${getTextColor()} font-mono`}>
+            HP: {formattedHP}
+          </span>
+          <span className="text-xs text-foreground-light/60">
+            {hp} {minutesText} remaining
           </span>
         </div>
+        
+        <span className={`text-xs uppercase tracking-widest font-mono ${getTextColor()}`}>
+          {lifeState}
+        </span>
+      </div>
+      
+      {/* HP bar container */}
+      <div className="h-4 bg-secondary/80 overflow-hidden border border-border/40">
+        <motion.div
+          className={`h-full ${getBarColor()} transition-colors duration-500`}
+          initial={{ width: 0 }}
+          animate={{ width: isDead ? 0 : `${percentage}%` }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+        />
       </div>
     </motion.div>
   );
