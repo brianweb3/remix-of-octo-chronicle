@@ -175,7 +175,7 @@ function Index() {
                 </div>
                 
                 {/* HP Bar below octopus */}
-                <div className="w-full mt-12 mb-8 flex flex-col items-center pb-6">
+                <div className="w-full mt-20 mb-8 flex flex-col items-center pb-8">
                   <LifeBar state={state} />
                   
                   {/* Death message */}
