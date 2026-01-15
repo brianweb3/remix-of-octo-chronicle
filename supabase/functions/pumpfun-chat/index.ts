@@ -10,21 +10,34 @@ async function fetchPumpfunMessages(tokenMint: string): Promise<any[]> {
   return new Promise((resolve) => {
     const messages: any[] = [];
     let resolved = false;
+    let ackId = 0;
+    let joinedRoom = false;
     
     const timeout = setTimeout(() => {
       if (!resolved) {
+        console.log("[pumpfun-chat] Timeout reached, returning messages:", messages.length);
         resolved = true;
         resolve(messages);
       }
-    }, 8000); // 8 second timeout
+    }, 12000); // 12 second timeout
     
     try {
-      // Use Engine.IO v4 WebSocket URL
       const wsUrl = `wss://livechat.pump.fun/socket.io/?EIO=4&transport=websocket`;
       
       console.log(`[pumpfun-chat] Connecting to: ${wsUrl}`);
       
       const ws = new WebSocket(wsUrl);
+      
+      const send = (data: string) => {
+        console.log(`[pumpfun-chat] >>> ${data.slice(0, 100)}`);
+        ws.send(data);
+      };
+      
+      const getNextAckId = () => {
+        const id = ackId;
+        ackId = (ackId + 1) % 10;
+        return id;
+      };
       
       ws.onopen = () => {
         console.log("[pumpfun-chat] WebSocket connected");
@@ -32,47 +45,102 @@ async function fetchPumpfunMessages(tokenMint: string): Promise<any[]> {
       
       ws.onmessage = (event) => {
         const data = event.data as string;
-        console.log(`[pumpfun-chat] Received: ${data.slice(0, 100)}`);
+        console.log(`[pumpfun-chat] <<< ${data.slice(0, 200)}`);
         
-        // Engine.IO protocol:
-        // 0 - open
-        // 40 - Socket.IO connect
+        // Engine.IO / Socket.IO protocol:
+        // 0 - open (server sends connection info)
+        // 2 - ping
+        // 3 - pong
+        // 40 - Socket.IO connect / connected ack
         // 42 - Socket.IO event
+        // 43X - Socket.IO ack (X = ack id)
         
-        if (data === "0") {
-          // Send Socket.IO connect
-          ws.send("40");
-        } else if (data === "40") {
-          // Connected, join the room
-          const joinPayload = JSON.stringify(["joinRoom", { mint: tokenMint }]);
-          ws.send(`42${joinPayload}`);
-          console.log(`[pumpfun-chat] Joined room: ${tokenMint}`);
-        } else if (data.startsWith("42")) {
-          // Socket.IO event
-          try {
-            const payload = JSON.parse(data.slice(2));
-            const [eventName, eventData] = payload;
+        // Get message type prefix
+        const messageType = data.match(/^(\d+)/)?.[1];
+        
+        switch (messageType) {
+          case "0":
+            // Server open - send Socket.IO handshake
+            send(`40{"origin":"https://pump.fun","timestamp":${Date.now()},"token":null}`);
+            break;
             
-            if (eventName === "messageHistory" && Array.isArray(eventData)) {
-              console.log(`[pumpfun-chat] Got ${eventData.length} history messages`);
-              messages.push(...eventData);
+          case "40":
+            // Socket.IO connected - join the room
+            const joinAckId = getNextAckId();
+            send(`42${joinAckId}["joinRoom",{"roomId":"${tokenMint}","username":"octo-viewer"}]`);
+            break;
+            
+          case "42":
+            // Socket.IO event
+            try {
+              const eventData = JSON.parse(data.substring(2));
+              const [eventName, payload] = eventData;
               
-              // Got history, we can resolve now
-              if (!resolved) {
-                resolved = true;
-                clearTimeout(timeout);
-                ws.close();
-                resolve(messages);
+              if (eventName === "setCookie") {
+                // After setCookie, request message history
+                const historyAckId = getNextAckId();
+                send(`42${historyAckId}["getMessageHistory",{"roomId":"${tokenMint}","before":null,"limit":50}]`);
+              } else if (eventName === "newMessage" && payload) {
+                messages.push(payload);
               }
-            } else if (eventName === "message" && eventData) {
-              messages.push(eventData);
+            } catch (e) {
+              console.log("[pumpfun-chat] Failed to parse event:", e);
             }
-          } catch (e) {
-            console.log("[pumpfun-chat] Failed to parse event:", e);
-          }
-        } else if (data === "2") {
-          // Ping - respond with pong
-          ws.send("3");
+            break;
+            
+          case "430":
+          case "431":
+          case "432":
+          case "433":
+          case "434":
+          case "435":
+          case "436":
+          case "437":
+          case "438":
+          case "439":
+            // Numbered acknowledgment
+            try {
+              const ackData = JSON.parse(data.substring(3));
+              console.log("[pumpfun-chat] Ack data:", JSON.stringify(ackData).slice(0, 200));
+              
+              // Check if this is join room ack (first ack after connect)
+              if (!joinedRoom) {
+                joinedRoom = true;
+                // Request message history after joining
+                const historyAckId = getNextAckId();
+                send(`42${historyAckId}["getMessageHistory",{"roomId":"${tokenMint}","before":null,"limit":50}]`);
+              } else {
+                // This should be message history response
+                const historyMessages = ackData[0];
+                if (Array.isArray(historyMessages) && historyMessages.length > 0) {
+                  console.log(`[pumpfun-chat] Got ${historyMessages.length} history messages`);
+                  messages.push(...historyMessages);
+                  
+                  // Got history, resolve
+                  if (!resolved) {
+                    resolved = true;
+                    clearTimeout(timeout);
+                    ws.close();
+                    resolve(messages);
+                  }
+                }
+              }
+            } catch (e) {
+              console.log("[pumpfun-chat] Failed to parse ack:", e);
+            }
+            break;
+            
+          case "2":
+            // Ping - respond with pong
+            send("3");
+            break;
+            
+          case "3":
+            // Pong - no action needed
+            break;
+            
+          default:
+            console.log("[pumpfun-chat] Unknown message type:", messageType);
         }
       };
       
@@ -85,8 +153,8 @@ async function fetchPumpfunMessages(tokenMint: string): Promise<any[]> {
         }
       };
       
-      ws.onclose = () => {
-        console.log("[pumpfun-chat] WebSocket closed");
+      ws.onclose = (event) => {
+        console.log("[pumpfun-chat] WebSocket closed:", event.code, event.reason);
         if (!resolved) {
           resolved = true;
           clearTimeout(timeout);
@@ -124,13 +192,21 @@ serve(async (req) => {
 
     const messages = await fetchPumpfunMessages(tokenMint);
     
-    console.log(`[pumpfun-chat] Returning ${messages.length} messages`);
+    // Transform messages to consistent format
+    const formattedMessages = messages.map((msg: any) => ({
+      user: msg.userAddress || msg.user || 'anon',
+      message: msg.message || msg.content || '',
+      timestamp: msg.timestamp ? new Date(msg.timestamp).getTime() : Date.now(),
+      username: msg.username || null,
+    }));
+    
+    console.log(`[pumpfun-chat] Returning ${formattedMessages.length} messages`);
 
     return new Response(
       JSON.stringify({ 
-        messages, 
-        source: messages.length > 0 ? "live" : "empty",
-        count: messages.length 
+        messages: formattedMessages, 
+        source: formattedMessages.length > 0 ? "live" : "empty",
+        count: formattedMessages.length 
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
