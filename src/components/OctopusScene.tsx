@@ -1,6 +1,6 @@
 import { Canvas, useFrame } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
-import { useRef, useMemo } from 'react';
+import { OrbitControls } from '@react-three/drei';
+import { useRef, useMemo, Suspense } from 'react';
 import * as THREE from 'three';
 import { LifeState } from '@/types/octo';
 
@@ -213,37 +213,39 @@ interface OctopusSceneProps {
 export function OctopusScene({ lifeState }: OctopusSceneProps) {
   return (
     <div className="w-full h-full">
-      <Canvas
-        camera={{ position: [0, 1, 5], fov: 50 }}
-        gl={{ antialias: true, alpha: true }}
-        style={{ background: 'transparent' }}
-      >
-        <ambientLight intensity={0.5} />
-        <directionalLight position={[5, 5, 5]} intensity={1.2} color="#ffffff" />
-        <directionalLight position={[-3, 2, -3]} intensity={0.5} color="#4ECDC4" />
-        <pointLight position={[0, -3, 0]} intensity={0.4} color="#FF6B35" />
-        <spotLight 
-          position={[0, 8, 0]} 
-          intensity={0.3} 
-          angle={0.5} 
-          penumbra={1}
-          color="#A8E6CF"
-        />
-        
-        <LowPolyOctopus lifeState={lifeState} />
-        
-        <OrbitControls 
-          enableZoom={false}
-          enablePan={false}
-          autoRotate={lifeState !== 'dead'}
-          autoRotateSpeed={lifeState === 'alive' ? 0.4 : 0.15}
-          minPolarAngle={Math.PI / 3}
-          maxPolarAngle={Math.PI / 2.2}
-          target={[0, 0, 0]}
-        />
-        
-        <Environment preset="sunset" />
-      </Canvas>
+      <Suspense fallback={null}>
+        <Canvas
+          camera={{ position: [0, 1, 5], fov: 50 }}
+          gl={{ antialias: true, alpha: true }}
+          style={{ background: 'transparent' }}
+        >
+          {/* Ambient and directional lighting for low-poly aesthetic */}
+          <ambientLight intensity={0.6} />
+          <directionalLight position={[5, 5, 5]} intensity={1.2} color="#ffffff" />
+          <directionalLight position={[-3, 2, -3]} intensity={0.5} color="#4ECDC4" />
+          <pointLight position={[0, -3, 0]} intensity={0.4} color="#FF6B35" />
+          <spotLight 
+            position={[0, 8, 0]} 
+            intensity={0.3} 
+            angle={0.5} 
+            penumbra={1}
+            color="#A8E6CF"
+          />
+          <hemisphereLight args={['#4ECDC4', '#FF6B35', 0.3]} />
+          
+          <LowPolyOctopus lifeState={lifeState} />
+          
+          <OrbitControls 
+            enableZoom={false}
+            enablePan={false}
+            autoRotate={lifeState !== 'dead'}
+            autoRotateSpeed={lifeState === 'alive' ? 0.4 : 0.15}
+            minPolarAngle={Math.PI / 3}
+            maxPolarAngle={Math.PI / 2.2}
+            target={[0, 0, 0]}
+          />
+        </Canvas>
+      </Suspense>
     </div>
   );
 }
