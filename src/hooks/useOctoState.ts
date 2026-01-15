@@ -53,7 +53,6 @@ export function useOctoState() {
   const [totalHPReceived] = useState(MOCK_DONATIONS.reduce((acc, d) => acc + d.hpAdded, 0));
   const [isLoadingResponse, setIsLoadingResponse] = useState(false);
   
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const writingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const hasRespondedRef = useRef(false);
   
@@ -96,45 +95,7 @@ export function useOctoState() {
     return () => clearInterval(interval);
   }, [isDead]);
   
-  // Speak function using ElevenLabs
-  const speak = useCallback(async (text: string) => {
-    try {
-      console.log('Speaking:', text);
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/octo-speak`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-          },
-          body: JSON.stringify({ text }),
-        }
-      );
-      
-      if (!response.ok) {
-        console.error('Speak response not ok:', response.status);
-        return;
-      }
-      
-      const audioBlob = await response.blob();
-      const audioUrl = URL.createObjectURL(audioBlob);
-      
-      if (audioRef.current) {
-        audioRef.current.pause();
-        URL.revokeObjectURL(audioRef.current.src);
-      }
-      
-      audioRef.current = new Audio(audioUrl);
-      audioRef.current.volume = 0.8;
-      await audioRef.current.play();
-      console.log('Audio playing');
-    } catch (error) {
-      console.error('Failed to speak:', error);
-    }
-  }, []);
-  
-  // Generate AI response and speak it
+  // Generate AI response (voice disabled due to ElevenLabs free tier limit)
   const generateResponse = useCallback(async (chatMessage?: string, messageId?: string) => {
     if (isDead || isLoadingResponse) return;
     
@@ -186,9 +147,6 @@ export function useOctoState() {
       };
       setChatMessages(prev => [...prev.slice(-20), newMessage]);
       
-      // Speak the response
-      await speak(octoResponse);
-      
       // Clear speech bubble and highlight after display
       const displayTime = Math.max(6000, octoResponse.length * 100);
       setTimeout(() => {
@@ -202,7 +160,7 @@ export function useOctoState() {
     }
     
     setIsLoadingResponse(false);
-  }, [isDead, lifeState, isLoadingResponse, speak]);
+  }, [isDead, lifeState, isLoadingResponse]);
   
   // Octo responds to chat messages - triggered periodically
   useEffect(() => {
