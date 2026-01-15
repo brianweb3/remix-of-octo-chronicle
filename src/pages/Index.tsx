@@ -102,7 +102,7 @@ const Index = () => {
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="absolute bottom-24 text-xs text-foreground-light/40 font-mono"
+                    className="text-sm text-foreground-light/50 font-mono mt-4 text-center"
                   >
                     Octo Claude has ceased to exist
                   </motion.div>
