@@ -161,7 +161,7 @@ function Index() {
                 <div className="flex items-start justify-center gap-4">
                   {/* 3D Scene container - left side */}
                   <div className="w-[55%] h-[400px] lg:h-[450px] relative flex-shrink-0">
-                    <OctopusScene lifeState={state.lifeState} hp={state.hp} isDead={state.isDead} />
+                    <OctopusScene lifeState={state.lifeState} hp={state.hp} isDead={state.isDead} isSpeaking={isSpeaking} />
                   </div>
                   
                   {/* Speech bubble - right side */}

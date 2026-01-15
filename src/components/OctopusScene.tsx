@@ -7,37 +7,34 @@ import { LifeState } from '@/types/octo';
 interface OctopusProps {
   lifeState: LifeState;
   hp: number;
+  isSpeaking?: boolean;
 }
 
-function LowPolyOctopus({ lifeState, hp }: OctopusProps) {
+function LowPolyOctopus({ lifeState, hp, isSpeaking = false }: OctopusProps) {
   const groupRef = useRef<THREE.Group>(null);
   const headRef = useRef<THREE.Mesh>(null);
+  const mouthRef = useRef<THREE.Mesh>(null);
   const tentacleGroupRefs = useRef<THREE.Group[]>([]);
   
   // Color based on life state and HP
-  // Less than 5 HP = dying (darker, desaturated)
-  // More than 15 HP = alive (brighter, more vibrant)
   const colors = useMemo(() => {
     if (lifeState === 'dead') {
       return { main: '#555555', light: '#777777', dark: '#333333', accent: '#666666' };
     }
     if (hp < 5) {
-      // Dying - dark, desaturated purple/gray
       return { main: '#6B5B7A', light: '#8A7B9A', dark: '#4A3B5A', accent: '#7A6B6A' };
     }
     if (hp > 15) {
-      // Alive and happy - vibrant teal/cyan
       return { main: '#00D4AA', light: '#66FFDD', dark: '#00A080', accent: '#FFB347' };
     }
-    // Starving - muted colors
     return { main: '#7FCDCD', light: '#B8E4E4', dark: '#4A9999', accent: '#D4A574' };
   }, [lifeState, hp]);
   
   // Animation speed based on life state
   const animSpeed = useMemo(() => {
     if (lifeState === 'dead') return 0;
-    if (hp > 15) return 1.2; // More lively when happy
-    if (hp < 5) return 0.15; // Very slow when dying
+    if (hp > 15) return 1.2;
+    if (hp < 5) return 0.15;
     return 0.5;
   }, [lifeState, hp]);
   
@@ -52,21 +49,33 @@ function LowPolyOctopus({ lifeState, hp }: OctopusProps) {
       headRef.current.scale.set(breathScale, breathScale * 0.95, breathScale);
     }
     
-    // Only subtle sway - NO vertical movement to prevent sliding down
+    // Mouth animation when speaking
+    if (mouthRef.current) {
+      if (isSpeaking) {
+        // Animate mouth opening and closing rapidly when speaking
+        const mouthOpen = Math.abs(Math.sin(time * 12)) * 0.15 + 0.05;
+        mouthRef.current.scale.set(1, mouthOpen * 5 + 0.5, 1);
+        mouthRef.current.position.y = 0.35 - mouthOpen * 0.1;
+      } else {
+        // Closed mouth when not speaking
+        mouthRef.current.scale.set(1, 0.5, 1);
+        mouthRef.current.position.y = 0.35;
+      }
+    }
+    
+    // Only subtle sway
     groupRef.current.rotation.y = Math.sin(time * 0.3 * animSpeed) * 0.08;
     groupRef.current.rotation.z = Math.sin(time * 0.2 * animSpeed) * 0.02;
     
-    // Organic tentacle wave - each tentacle waves independently
+    // Organic tentacle wave
     tentacleGroupRefs.current.forEach((tentacleGroup, i) => {
       if (tentacleGroup) {
         const offset = (i / 8) * Math.PI * 2;
         const wavePhase = time * animSpeed * 0.8;
         
-        // Base rotation
         tentacleGroup.rotation.x = 0.4 + Math.sin(wavePhase + offset) * 0.2;
         tentacleGroup.rotation.z = Math.sin(wavePhase * 0.7 + offset) * 0.15;
         
-        // Secondary curl
         const curl = Math.sin(wavePhase * 0.5 + offset * 2) * 0.1;
         tentacleGroup.rotation.y = curl;
       }
@@ -76,7 +85,6 @@ function LowPolyOctopus({ lifeState, hp }: OctopusProps) {
   // Create more detailed low-poly head
   const headGeometry = useMemo(() => {
     const geo = new THREE.IcosahedronGeometry(1.2, 1);
-    // Elongate vertically for octopus head shape
     const positions = geo.attributes.position.array;
     for (let i = 1; i < positions.length; i += 3) {
       (positions as Float32Array)[i] *= 1.4;
@@ -89,6 +97,9 @@ function LowPolyOctopus({ lifeState, hp }: OctopusProps) {
   // Eye geometry
   const eyeGeometry = useMemo(() => new THREE.IcosahedronGeometry(0.22, 0), []);
   const pupilGeometry = useMemo(() => new THREE.BoxGeometry(0.1, 0.1, 0.1), []);
+  
+  // Mouth geometry - simple box that scales for animation
+  const mouthGeometry = useMemo(() => new THREE.BoxGeometry(0.3, 0.1, 0.15), []);
   
   return (
     <group ref={groupRef} position={[0, 0, 0]}>
@@ -127,6 +138,21 @@ function LowPolyOctopus({ lifeState, hp }: OctopusProps) {
       </mesh>
       <mesh geometry={pupilGeometry} position={[0.45, 0.7, 1.02]}>
         <meshStandardMaterial color="#ffffff" />
+      </mesh>
+      
+      {/* Mouth */}
+      <mesh 
+        ref={mouthRef} 
+        geometry={mouthGeometry} 
+        position={[0, 0.35, 1.0]}
+      >
+        <meshStandardMaterial color={colors.dark} flatShading />
+      </mesh>
+      
+      {/* Inner mouth (visible when open) */}
+      <mesh position={[0, 0.35, 0.95]}>
+        <boxGeometry args={[0.25, 0.08, 0.1]} />
+        <meshStandardMaterial color="#1a0a1a" />
       </mesh>
       
       {/* Tentacles */}
@@ -191,10 +217,10 @@ interface OctopusSceneProps {
   lifeState: LifeState;
   hp: number;
   isDead?: boolean;
+  isSpeaking?: boolean;
 }
 
-export function OctopusScene({ lifeState, hp, isDead = false }: OctopusSceneProps) {
-  // When dead, force lifeState to 'dead' for animations
+export function OctopusScene({ lifeState, hp, isDead = false, isSpeaking = false }: OctopusSceneProps) {
   const effectiveLifeState = isDead ? 'dead' : lifeState;
   const effectiveHP = isDead ? 0 : hp;
   
@@ -220,7 +246,7 @@ export function OctopusScene({ lifeState, hp, isDead = false }: OctopusSceneProp
           />
           <hemisphereLight args={['#4ECDC4', '#FF6B35', 0.3]} />
           
-          <LowPolyOctopus lifeState={effectiveLifeState} hp={effectiveHP} />
+          <LowPolyOctopus lifeState={effectiveLifeState} hp={effectiveHP} isSpeaking={isSpeaking} />
           
           <OrbitControls 
             enableZoom={false}
