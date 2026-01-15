@@ -13,7 +13,7 @@ import { useOctoState } from '@/hooks/useOctoState';
 
 type TabType = 'home' | 'x' | 'writings';
 
-const Index = () => {
+function Index() {
   const { 
     state, 
     writings, 
@@ -168,6 +168,6 @@ const Index = () => {
       )}
     </div>
   );
-};
+}
 
 export default Index;
