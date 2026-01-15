@@ -6,6 +6,9 @@ verify_jwt = false
 [functions.octo-speak]
 verify_jwt = false
 
+[functions.octo-tts]
+verify_jwt = false
+
 [functions.octo-write]
 verify_jwt = false
 
